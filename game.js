@@ -20,6 +20,7 @@ const {
     refreshActionRound,
     refreshDealerRound,
     findNextPlayer,
+    rankToHandStr,
 } = require('./gameFunctions');
 
 const { PokerGame } = require('./pokerGame');
@@ -393,7 +394,7 @@ const handleCommandLineInput = (input) => {
             return;
         }
 
-        handlePlayerAction(inputAction.playerAction);
+        handlePlayerAction(inputAction.playerAction, PG);
         // TODO(anyone): merge incrementTurn into findNextPlayer
         incrementTurn(PG);
         findNextPlayer(PG);
@@ -439,8 +440,22 @@ const handleCommandLineInput = (input) => {
 
         // this part will be replaced with showdown
         if (checkActionRoundEndingCondition(PG)) {
-            console.log('Ladies and gentlemen, we have a showdown!');
-            showdown(PG);
+
+            // set the winning hand rank and its player index
+            let winHandRank = showdown(PG);
+
+            // give the player the pot and reset it to 0
+            PG.playerObjectArray[winHandRank.playerIndex].stack += PG.pot;
+            PG.pot = 0;
+
+            // state the winner and how they won
+            let outputStr = `Player ${PG.playerObjectArray[winHandRank.playerIndex].ID}`;
+            outputStr += ` won with a ${rankToHandStr(winHandRank[0])}`;
+            console.log(outputStr);
+
+            // reset the dealer round
+            refreshDealerRound(PG);
+            PG.actionRoundState = 0;
             return;
         }
 

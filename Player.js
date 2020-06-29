@@ -6,7 +6,7 @@ class Player {
         this.actionState = '';
         this.potCommitment = 0;
         this.inGame = true;
-        this.showdownCards = [];
+        this.showdownRank = [];
     }
 
     // the raise function is the only one of the four actions that depends on a numerical input from the user,
