@@ -1,0 +1,23 @@
+{
+  "name": "command-line-pokergame",
+  "version": "0.1.0",
+  "description": "Command line Poker Game written in node",
+  "main": "game.js",
+  "scripts": {
+    "test": "jest",
+    "dev": "node game.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aklu96/PokerGame.git"
+  },
+  "author": "Alex Klyuev & JJ Velez",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/aklu96/PokerGame/issues"
+  },
+  "homepage": "https://github.com/aklu96/PokerGame#readme",
+  "devDependencies": {
+    "jest": "^26.1.0"
+  }
+}
