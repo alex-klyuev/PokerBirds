@@ -1,3 +1,13 @@
+const ranksEqual = (r1, r2) => {
+    if (r1 === r2) return true;
+    if (r1 == null || r2 == null) return false;
+    if (r1.length !== r2.length) return false;
+    for (var i = 0; i < r1.length; ++i) {
+        if (r1[i] !== r2[i]) return false;
+    }
+    return true;
+};
+
 const bestHandRank = (sevenCards) => {
     let currentCombination = [];
     currentCombination.length = 5; // just for you AK :)
@@ -28,12 +38,12 @@ const bestHandRank = (sevenCards) => {
         handRanks.push(handRank);
     }
 
-    return pickBestHandRank(handRanks);
+    return pickSingleBestHandRank(handRanks);
 };
 
 
-const pickBestHandRank = (handRanks) => {
-    // sort the hand ranks and return the best one
+const pickSingleBestHandRank = (handRanks) => {
+    // sort the hand ranks and return the best ones
     handRanks.sort((rank1, rank2) => {
         for (let i = 0; i < rank1.length; i++) {
             if (rank2[i] - rank1[i] !== 0) {
@@ -42,6 +52,42 @@ const pickBestHandRank = (handRanks) => {
         }
     });
     return handRanks[0];
+};
+
+// TODO(anyone): Test this function
+const pickBestHandRanks = (handRanks) => {
+    // sort the hand ranks and return the best ones
+    handRanks.sort((rank1, rank2) => {
+        for (let i = 0; i < rank1.length; i++) {
+            if (rank2[i] - rank1[i] !== 0) {
+                return rank2[i] - rank1[i];
+            }
+        }
+    });
+
+    // get how many same handRanks there are starting from comparing
+    //   handRanks[0] with handRanks[1],
+    //   handRanks[1] with handRanks[2], ...
+    // that will give you an index for handRanks to slice until, through which each handRank from 0 to that idx is the same
+    // as the previous
+    let numWinRanks = 1;
+    while (numWinRanks < handRanks.length && ranksEqual(handRanks[numWinRanks - 1], handRanks[numWinRanks])) {
+        numWinRanks++;
+    }
+
+    // get all handRanks equal to the first handRank
+    let winRanks = handRanks.slice(0, numWinRanks);
+
+    // get all unique playerIndexes from winRanks
+    let s = new Set();
+    let uniquePlayerWinRanks = [];
+    winRanks.forEach((rank) => {
+        if (!s.has(rank.playerIndex)) {
+            s.add(rank.playerIndex);
+            uniquePlayerWinRanks.push(rank);
+        }
+    });
+    return uniquePlayerWinRanks;
 };
 
 
@@ -261,7 +307,7 @@ const highCard = (hand) => {
  * Important! Its order matters, as it's used to iterate from 0 –> 8 and whichever handFunction call returns a non-null
  * value will be set as the rank for a hand.
  */
-const handFunctionsArray = [straightFlush, fourOfAKind, fullHouse, flush, straight,
+const handFunctions = [straightFlush, fourOfAKind, fullHouse, flush, straight,
     threeOfAKind, twoPair, pair, highCard];
 
 
@@ -285,9 +331,9 @@ const getHandRank = (hand) => {
     // sort hand by number rank from greatest to lowest
     hand.sort((card1, card2) => card2[0] - card1[0]);
 
-    // iterate through the handFunctionsArray and return the hand
-    for (i = 0; i < handFunctionsArray.length; i++) {
-        let handRank = handFunctionsArray[i](hand);
+    // iterate through the handFunctions and return the hand
+    for (i = 0; i < handFunctions.length; i++) {
+        let handRank = handFunctions[i](hand);
         if (handRank !== null) {
             return handRank;
         }
@@ -445,7 +491,7 @@ const makeFreqMap = (hand) => {
 
 module.exports = {
     bestHandRank,
-    pickBestHandRank,
+    pickBestHandRanks,
     getHandRank,
     outputGameStatus,
     outputPlayerInquiry,

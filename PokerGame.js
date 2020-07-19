@@ -7,7 +7,7 @@ const {
 const {
     toDollars,
     bestHandRank,
-    pickBestHandRank,
+    pickBestHandRanks,
     beautifyCard,
 } = require('./utils');
 
@@ -27,7 +27,8 @@ class PokerGame {
         // Game state variables that change per action & dealer round. Monetary values are in cents.
         this.dealerIdx = 0;
         this.turnIdx = 0;
-        // TODO(anyone): Change pot to totalPot and create an actionRoundPot to display both?
+        // TODO(anyone): Change pot to pots (an array, probably containing who can win in that pot). 
+        // TODO(anyone): Create an actionRoundPot to display both?
         this.pot = 0;
         // -1 = prev variables uninitialized, 0 = pre-flop, 1 = flop, 2 = turn, 3 = river
         this.actionRound = -1;
@@ -215,8 +216,8 @@ class PokerGame {
     }
 
     // TODO(anyone): throw or return true/false if successful/unsuccessful
-    callCurrentPlayerAction(action) {
-        switch (action[0]) {
+    callCurrentPlayerAction(result) {
+        switch (result.playerAction) {
             case 'all-in':
                 this.currentPlayer.allIn();
                 break;
@@ -224,7 +225,7 @@ class PokerGame {
                 this.currentPlayer.call();
                 break;
             case 'raise':
-                this.currentPlayer.raise(action[1]);
+                this.currentPlayer.raise(result.raiseAmount);
                 break;
             case 'fold':
                 this.currentPlayer.fold();
@@ -235,14 +236,14 @@ class PokerGame {
         }
     }
 
-    get numRaiseActionStates() {
-        let raises = 0;
+    get numNonRaiseActionStates() {
+        let nonRaises = 0;
         this.players.forEach((player) => {
-            if (player.actionState === 'raise') {
-                raises++;
+            if (player.actionState !== 'raise') {
+                nonRaises++;
             }
         });
-        return raises;
+        return nonRaises;
     }
 
     // During pre-flop, BB player (and SB player if this.smallBlind === this.bigBlind) has the option
@@ -254,17 +255,19 @@ class PokerGame {
         //  - it's SB's turn
         //  - this.smallBlind === this.bigBlind
         //  - no one else (other than SB & BB) has raised
-        if (this.currentPlayer.actionState === 'SB' && this.smallBlind === this.bigBlind && this.numRaiseActionStates === 0) {
+        if (this.currentPlayer.actionState === 'SB' && this.smallBlind === this.bigBlind
+            && this.numNonRaiseActionStates === this.numPlayers) {
             this.allowCheck = true;
         }
 
         // Make this.allowcheck = true for BB if:
         //  - it's BB's turn
         //  - this.smallBlind !== this.bigBlind - in which case it has already been toggled
-        //  - no one else (other than SB & BB) has raised
+        //  - no one else (other than SB & BB) has raised in action round
         // edge case: big blind re-raised and all other players called.
         // TODO(anyone): Not sure if this is a TODO still or not? ^^
-        if (this.currentPlayer.actionState === 'BB' && this.smallBlind !== this.bigBlind && this.numRaiseActionStates === 0) {
+        if (this.currentPlayer.actionState === 'BB' && this.smallBlind !== this.bigBlind
+            && this.numNonRaiseActionStates === this.numPlayers) {
             this.allowCheck = true;
         }
     }
@@ -444,6 +447,7 @@ class PokerGame {
             player.cards = [[], []];
             player.inGame = true;
             player.canRaise = true;
+            player.showdownRank = [];
 
             // If a player lost their money, they stay out. Can clear them out completely later.
             // Doesn't really matter though because browser version will have option to buy back in, leave, etc.
@@ -493,12 +497,17 @@ class PokerGame {
             }
         });
 
-        // returns the best hand rank and its player index
-        return pickBestHandRank(showdownHandRanks);
+        // returns the best hand ranks and their player indexes
+        return pickBestHandRanks(showdownHandRanks);
     }
 
     get currentPlayer() {
         return this.players[this.turnIdx];
+    }
+
+    canCurrentPlayerCheck() {
+        this.throwIfNotInitialized();
+        return this.allowCheck;
     }
 
     canCurrentPlayerCall() {
@@ -506,7 +515,6 @@ class PokerGame {
 
         // validate that there is a raise on the board to be called. Second part is to allow the SB to call
         // when it is not equal to the big blind
-
         let raiseCounter = 0;
         for (let i = 0; i < this.numPlayers; i++) {
             // this allows the small blind to call big blind as well
@@ -521,6 +529,11 @@ class PokerGame {
         } else {
             return true;
         }
+    }
+
+    canCurrentPlayerRaise() {
+        this.throwIfNotInitialized();
+        return this.currentPlayer.canRaise;
     }
 
     canCurrentPlayerRaiseBy(cents) {
