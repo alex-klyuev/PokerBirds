@@ -283,24 +283,15 @@ const handleCommandLineInput = (input) => {
                 console.log(`\nPlayer ${PG.players[PG.dealerIdx].id} is the dealer.`);
 
             } else if (PG.actionRoundEnded()) {
-                let arResult = PG.getActionRoundInfo();
-                console.log(`action round ended via ${arResult.scenario} scenario`);
+                PG.showdown();
 
-                // get all the winning hand ranks with their player indexes
-                let winHandRanks = PG.showdown();
-
-                // add (pot / numWinners) to each winner
-                let winAmount = PG.pot / winHandRanks.length;
-                winHandRanks.forEach(rank => {
-                    PG.players[rank.playerIndex].stack += winAmount;
+                // output winner(s) and winning hand(s)
+                PG.winHandRanks.forEach(rank => {
+                    // state the winner and how they won
                     console.log(`Player ${PG.players[rank.playerIndex].id} won with a ${rankToHandStr(rank[0])}`);
                 });
-                // reset pot to 0
-                PG.pot = 0;
 
-                // state the winner and how they won
                 PG.refreshDealerRound();
-
                 // declare the dealer, output the first game board, and announce the first turn
                 console.log(`\nPlayer ${PG.players[PG.dealerIdx].id} is the dealer.`);
             }

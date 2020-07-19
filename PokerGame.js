@@ -13,6 +13,7 @@ const {
 
 // TODO(anyone): removePlayer
 // TODO(anyone): standupPlayer
+// TODO(anyone): Create nonce and PokerGame state associated with it.
 class PokerGame {
     constructor() {
         // Once buyIn, SB and BB are initialized, will be changed to true.
@@ -41,6 +42,8 @@ class PokerGame {
         // toggle the state to false for the rest of the round. Is also toggled for the big blind pre-flop and small blind
         // if SB = BB.
         this.allowCheck = false;
+        // assigned during showdown function
+        this.winHandRanks = null;
     }
 
     throwIfNotInitialized() {
@@ -68,7 +71,7 @@ class PokerGame {
      * 2nd value that needs to be set. Sets the SB. Needs to be set before setting BB.
      * @param val number SB value in cents
      * @return boolean whether operation succeeded
-     * TODO(anyone): Add functionality to be able to increase/decreate SB/BB?
+     * TODO(anyone): Add functionality to be able to increase/decrease SB/BB?
      */
     setSmallBlind(val) {
         if (val <= 0) {
@@ -92,7 +95,7 @@ class PokerGame {
      * 3rd value that needs to be set. Sets the BB. Note, SB and buy-in need to be set first.
      * @param val number potential BB in cents
      * @return boolean whether operation succeeded
-     * TODO(anyone): Add functionality to be able to increase/decreate SB/BB?
+     * TODO(anyone): Add functionality to be able to increase/decrease SB/BB?
      */
     setBigBlind(val) {
         if (this.smallBlind === -1) {
@@ -215,28 +218,39 @@ class PokerGame {
         this.allowCheck = false;
     }
 
-    // TODO(anyone): throw or return true/false if successful/unsuccessful
     callCurrentPlayerAction(result) {
         switch (result.playerAction) {
             case 'all-in':
                 this.currentPlayer.allIn();
                 break;
             case 'call':
+                if (!this.canCurrentPlayerCall()) {
+                    throw new Error(`Current player (id: ${this.currentPlayer.id}) cannot call`);
+                }
                 this.currentPlayer.call();
                 break;
             case 'raise':
+                if (!this.canCurrentPlayerRaise()) {
+                    throw new Error(`Current player (id: ${this.currentPlayer.id}) cannot raise`);
+                }
+                if (!this.canCurrentPlayerRaiseBy(result.raiseAmount)) {
+                    throw new Error(`Current player (id: ${this.currentPlayer.id}) cannot raise by ${result.raiseAmount}`);
+                }
                 this.currentPlayer.raise(result.raiseAmount);
                 break;
             case 'fold':
                 this.currentPlayer.fold();
                 break;
             case 'check':
+                if (!this.canCurrentPlayerCheck()) {
+                    throw new Error(`Current player (id: ${this.currentPlayer.id}) cannot check`);
+                }
                 this.currentPlayer.check();
                 break;
         }
     }
 
-    get numNonRaiseActionStates() {
+    get currentNonRaiseActionStates() {
         let nonRaises = 0;
         this.players.forEach((player) => {
             if (player.actionState !== 'raise') {
@@ -256,7 +270,7 @@ class PokerGame {
         //  - this.smallBlind === this.bigBlind
         //  - no one else (other than SB & BB) has raised
         if (this.currentPlayer.actionState === 'SB' && this.smallBlind === this.bigBlind
-            && this.numNonRaiseActionStates === this.numPlayers) {
+            && this.currentNonRaiseActionStates === this.numPlayers) {
             this.allowCheck = true;
         }
 
@@ -267,7 +281,7 @@ class PokerGame {
         // edge case: big blind re-raised and all other players called.
         // TODO(anyone): Not sure if this is a TODO still or not? ^^
         if (this.currentPlayer.actionState === 'BB' && this.smallBlind !== this.bigBlind
-            && this.numNonRaiseActionStates === this.numPlayers) {
+            && this.currentNonRaiseActionStates === this.numPlayers) {
             this.allowCheck = true;
         }
     }
@@ -439,6 +453,7 @@ class PokerGame {
         this.throwIfNotInitialized();
 
         this.actionRound = 0;
+        this.winHandRanks = null;
 
         // refresh all of these variables
         this.players.forEach((player) => {
@@ -480,12 +495,12 @@ class PokerGame {
         }
     }
 
-    // TODO(anyone): Improve this method
     showdown() {
         this.validateInActionRound('river');
 
         let showdownHandRanks = [];
 
+        // get winning hand ranks and assign to this.winHandRanks
         this.players.forEach((player, idx) => {
             if (player.inGame) {
                 let sevenCards = [...this.board, ...player.cards];
@@ -496,9 +511,14 @@ class PokerGame {
                 showdownHandRanks.push(player.showdownRank);
             }
         });
+        this.winHandRanks = pickBestHandRanks(showdownHandRanks);
 
-        // returns the best hand ranks and their player indexes
-        return pickBestHandRanks(showdownHandRanks);
+        // add pot / numWinners to every winner, reset pot
+        let winAmount = PG.pot / winHandRanks.length;
+        this.winHandRanks.forEach((rank) => {
+            PG.players[rank.playerIndex].stack += winAmount;
+        });
+        this.pot = 0;
     }
 
     get currentPlayer() {
