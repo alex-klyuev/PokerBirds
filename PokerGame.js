@@ -1,7 +1,10 @@
 const {
-    MAX_BUYIN_IN_CENTS,
     MAX_PLAYERS_PER_GAME,
     NUM_CARDS_PER_PLAYER,
+    MAX_BUYIN_IN_CENTS,
+    ACTION_ROUNDS,
+} = require('./constants');
+const {
     toDollars,
     bestHandRank,
     pickBestHandRank,
@@ -14,19 +17,20 @@ class PokerGame {
     constructor() {
         // Once buyIn, SB and BB are initialized, will be changed to true.
         this.initialized = false;
+
         // Below constants should remain the same once initialized. Monetary values are in cents.
         this.buyIn = -1;
         this.smallBlind = -1;
         this.bigBlind = -1;
-
         this.players = [];
 
         // Game state variables that change per action & dealer round. Monetary values are in cents.
-        this.dealer = 0;
-        this.turn = 0;
+        this.dealerIdx = 0;
+        this.turnIdx = 0;
         // TODO(anyone): Change pot to totalPot and create an actionRoundPot to display both?
         this.pot = 0;
-        this.actionRoundState = 0; // 0 = pre-flop, 1 = flop, 2 = turn, 3 = river
+        // -1 = prev variables uninitialized, 0 = pre-flop, 1 = flop, 2 = turn, 3 = river
+        this.actionRound = -1;
         this.board = ['', '', '', '', ''];
         this.deck = [];
         this.minRaise = 0;
@@ -40,7 +44,8 @@ class PokerGame {
 
     throwIfNotInitialized() {
         if (!this.initialized) {
-            throw new Error(`Haven't initialized buyIn=${this.buyIn}, smallBlind=${this.smallBlind}, bigBlind=${this.bigBlind}`);
+            throw new Error(`Haven't initialized buyIn=${toCents(this.buyIn)}, smallBlind=${toCents(this.smallBlind)}` +
+                `, bigBlind=${toCents(this.bigBlind)}`);
         }
     }
 
@@ -54,7 +59,6 @@ class PokerGame {
             console.error(`Cannot initialize buy-in=${val}. Should be 1 <= val <= ${toDollars(MAX_BUYIN_IN_CENTS)}.`);
             return false;
         }
-
         this.buyIn = val;
         return true;
     }
@@ -114,10 +118,9 @@ class PokerGame {
 
     setDealer(idx) {
         if (idx < 0 || idx >= this.numPlayers) {
-            console.error(`Cannot set dealer to be ${idx}`);
-            return;
+            throw new Error(`Cannot set dealer to be ${idx}`);
         }
-        this.dealer = idx;
+        this.dealerIdx = idx;
     }
 
     isPositionAvailable(pos) {
@@ -131,12 +134,10 @@ class PokerGame {
      */
     addPlayerToPosition(player, pos) {
         if (!this.isPositionAvailable(pos)) {
-            console.error(`Cannot add player. Player already sitting at position ${pos}.`);
-            return;
+            throw new Error(`Cannot add player. Player already sitting at position ${pos}.`);
         }
         if (this.numPlayers === MAX_PLAYERS_PER_GAME) {
-            console.error(`Cannot add player. Already have max players (${MAX_PLAYERS_PER_GAME}).`);
-            return;
+            throw new Error(`Cannot add player. Already have max players (${MAX_PLAYERS_PER_GAME}).`);
         }
         this.players[pos] = player;
     }
@@ -158,9 +159,8 @@ class PokerGame {
     // increment turn and loop around the table if necessary
     incrementTurn() {
         this.throwIfNotInitialized();
-
-        this.turn++;
-        this.turn %= this.numPlayers;
+        this.turnIdx++;
+        this.turnIdx %= this.numPlayers;
     }
 
     // find the next player still in the game and increment the turn to them
@@ -212,7 +212,62 @@ class PokerGame {
         this.minRaise = this.bigBlind;
         this.previousBet = this.bigBlind;
         this.allowCheck = false;
-    };
+    }
+
+    // TODO(anyone): throw or return true/false if successful/unsuccessful
+    callCurrentPlayerAction(action) {
+        switch (action[0]) {
+            case 'all-in':
+                this.currentPlayer.allIn();
+                break;
+            case 'call':
+                this.currentPlayer.call();
+                break;
+            case 'raise':
+                this.currentPlayer.raise(action[1]);
+                break;
+            case 'fold':
+                this.currentPlayer.fold();
+                break;
+            case 'check':
+                this.currentPlayer.check();
+                break;
+        }
+    }
+
+    get numRaiseActionStates() {
+        let raises = 0;
+        this.players.forEach((player) => {
+            if (player.actionState === 'raise') {
+                raises++;
+            }
+        });
+        return raises;
+    }
+
+    // During pre-flop, BB player (and SB player if this.smallBlind === this.bigBlind) has the option
+    // to check if all other players called or folded.
+    preflopAllowCheckForSBAndOrBB() {
+        this.validateInActionRound('pre-flop');
+
+        // Make this.allowCheck = true for SB's turn if:
+        //  - it's SB's turn
+        //  - this.smallBlind === this.bigBlind
+        //  - no one else (other than SB & BB) has raised
+        if (this.currentPlayer.actionState === 'SB' && this.smallBlind === this.bigBlind && this.numRaiseActionStates === 0) {
+            this.allowCheck = true;
+        }
+
+        // Make this.allowcheck = true for BB if:
+        //  - it's BB's turn
+        //  - this.smallBlind !== this.bigBlind - in which case it has already been toggled
+        //  - no one else (other than SB & BB) has raised
+        // edge case: big blind re-raised and all other players called.
+        // TODO(anyone): Not sure if this is a TODO still or not? ^^
+        if (this.currentPlayer.actionState === 'BB' && this.smallBlind !== this.bigBlind && this.numRaiseActionStates === 0) {
+            this.allowCheck = true;
+        }
+    }
 
     addToBoard = () => {
         this.throwIfNotInitialized();
@@ -228,17 +283,55 @@ class PokerGame {
     }
 
     flop() {
+        this.validateInActionRound('flop');
         this.addToBoard();
         this.addToBoard();
         this.addToBoard();
     };
 
     turn() {
+        this.validateInActionRound('turn');
         this.addToBoard();
     }
 
     river() {
+        this.validateInActionRound('river');
         this.addToBoard();
+    }
+
+    get actionRoundStr() {
+        return ACTION_ROUNDS[this.actionRound];
+    }
+
+    get noRaiseScenarioCounter() {
+        let counter = 0;
+        this.players.forEach((player) => {
+            // handles both pre-flop and post-flop "no raise" situations
+            if (player.actionState === 'call' || player.actionState === 'fold'
+                || player.actionState === 'check' || player.actionState === '') {
+                counter++;
+            }
+        });
+        return counter;
+    }
+
+    get raiseScenarioCounter() {
+        let C = 0;
+        this.players.forEach((player) => {
+            // handles "raise" situations
+            if (player.actionState === 'call' || player.actionState === 'fold' || player.actionState === '') {
+                C++; // <-- Had you ever seen C++ in code? I actually hadn't until now.
+            }
+        });
+        return C;
+    }
+
+    // Returns true if:
+    //  - no one has raised and everyone has played (i.e. called, folded, checked or are out of game) OR
+    //  - only currentPlayer has raised AND everyone else that's in the game has either folded or checked
+    actionRoundEnded() {
+        return this.noRaiseScenarioCounter === this.numPlayers
+            || (this.raiseScenarioCounter === this.numPlayers - 1 && this.currentPlayer.actionState === 'raise');
     }
 
     /**
@@ -246,88 +339,69 @@ class PokerGame {
      *  1. "No-raise": where there has been no raise and everyone checks or folds, or in the case of the pre-flop,
      *     calls, checks, or folds.
      *  2. "Raise": where there is one remaining raiser and everyone else behind calls or folds.
-     * @returns {
-     *    ended (boolean): whether action round ended,
-     *    scenario (string): "raise" or "no-raise"
-     * }
+     * @returns { scenario: "raise" or "no-raise" }
      */
     getActionRoundInfo() {
         this.throwIfNotInitialized();
-
-        let actionCounter1 = 0;
-        let actionCounter2 = 0;
-
-        this.players.forEach((player) => {
-            // handles both pre-flop and post-flop "no raise" situations
-            if (player.actionState === 'call' || player.actionState === 'fold'
-                || player.actionState === 'check' || player.actionState === '') {
-                actionCounter1++;
-            }
-            // handles "raise" situations
-            if (player.actionState === 'call' || player.actionState === 'fold'
-                || player.actionState === '') {
-                actionCounter2++;
-            }
-        });
+        if (!this.actionRoundEnded()) {
+            throw new Error(`Action round hasn't ended.`);
+        }
 
         // can be combined later
         // no-raise scenario
-        if (actionCounter1 === this.numPlayers) {
-            return { ended: true, scenario: 'no-raise' }; // free cards smh cod clam it
+        if (this.noRaiseScenarioCounter === this.numPlayers) {
+            return { scenario: 'no-raise' }; // free cards smh cod clam it
         }
 
         // raise scenario
-        if (actionCounter2 === this.numPlayers - 1 && this.currentPlayer.actionState === 'raise') {
-            return { ended: true, scenario: 'raise' }; // no free cards baby!
-        }
+        return { scenario: 'raise' }; // no free cards baby!
+    }
 
-        // action round ending conditions not met
-        return { ended: false };
+    // Idempotent method. Returns true if everyone except one person has folded, i.e. if the dealer round ended
+    dealerRoundEnded() {
+        let outOfGame = 0;
+        this.players.forEach((player) => {
+            if (player.actionState === 'fold' || player.actionState === '') {
+                outOfGame++;
+            }
+        });
+        return outOfGame === this.numPlayers - 1;
     }
 
     /**
-     * Not idempotent method. TODO(anyone) Make idempotent
-     * Ends the dealer round when everyone except one person has folded. That person will win the pot.
+     * Ends the dealer round if everyone except one person has folded and assigns pot to that person (i.e. the winner).
      * This is one of two ways a dealer round can end - the other is with a showdown that has its own function.
      * @returns {
-     *    ended (boolean): whether dealer round ended,
-     *    winnerIndex? (optional number),
-     *    potWinnings? (optional number)
+     *    winnerIdx (optional number): index of player that won the dealer round,
+     *    winnings (optional number): pot winnings (in cents)
      * }
      */
-    getDealerRoundInfo() {
+    getDealerRoundInfoAndAddPotToDealerRoundWinner() {
         this.throwIfNotInitialized();
-
-        let dealerCounter = 0;
-        let winnerIndex;
-
-        this.players.forEach((player, idx) => {
-            if (player.actionState === 'fold' || player.actionState === '') {
-                dealerCounter++;
-            } else {
-                winnerIndex = idx;
-            }
-        });
-
-        if (dealerCounter === this.numPlayers - 1) {
-            // move pot to winner's stack
-            this.players[winnerIndex].stack += this.pot;
-            let potWinnings = this.pot;
-            this.pot = 0;
-            return {
-                ended: true,
-                winnerIndex,
-                potWinnings,
-            };
+        if (!this.dealerRoundEnded()) {
+            throw new Error(`Dealer round hasn't ended.`);
         }
 
-        // dealer round didn't end
-        return { ended: false };
+        let winnerIdx;
+
+        // if everyone has folded in current action round or is out from previous action round
+        this.players.forEach((player, idx) => {
+            if (player.actionState === 'fold' || player.actionState === '') { /* do nothing */ }
+            else { winnerIdx = idx; }
+        });
+
+        // move pot to winner's stack
+        this.players[winnerIdx].stack += this.pot;
+        let winnings = this.pot;
+        this.pot = 0;
+        return { winnerIdx, winnings };
     }
 
-    // restart the following action round
-    refreshActionRound() {
-        this.throwIfNotInitialized();
+    // start the following action round
+    refreshAndIncActionRound() {
+        this.validateNotInActionRound('river', 'Cannot refresh and increment action round consecutively more than 4' +
+            'times without calling refreshDealerRound.');
+        this.validateNotInActionRound('uninitialized', `Must call refreshDealerRound before calling refreshAndIncActionRound.`);
 
         // clear pot commitment and action states; cards remain the same; reset this.minRaise; allow check
         this.players.forEach((player) => {
@@ -340,7 +414,7 @@ class PokerGame {
         this.allowCheck = true;
 
         // action rounds begins with the small blind
-        this.turn = this.dealer;
+        this.turnIdx = this.dealerIdx;
         this.incrementTurn(); // TODO(anyone): Is this incrementTurn() necessary?
         this.incrementTurnToNextPlayerInGame();
 
@@ -352,11 +426,16 @@ class PokerGame {
                 this.players[i].actionState = ' ';
             }
         }
+
+        this.actionRound++;
     };
 
     // restart the following dealer round
+    // TODO(anyone): Figure out if should make this.pot = 0 here
     refreshDealerRound() {
         this.throwIfNotInitialized();
+
+        this.actionRound = 0;
 
         // refresh all of these variables
         this.players.forEach((player) => {
@@ -381,19 +460,25 @@ class PokerGame {
         this.dealCards();
 
         // increment dealer and loop around players array
-        this.dealer++;
-        this.dealer %= this.numPlayers;
+        this.dealerIdx++;
+        this.dealerIdx %= this.numPlayers;
 
         // set turn to small blind, next after dealer
-        this.turn = this.dealer;
+        this.turnIdx = this.dealerIdx;
         this.incrementTurn();
 
         this.postBlinds();
+
+        // edge case scenario where there are only 2 players and sb = bb, first player to act is sb
+        // and this allows them to check
+        if (this.currentPlayer.actionState === 'SB' && this.smallBlind === this.bigBlind) {
+            this.allowCheck = true;
+        }
     }
 
     // TODO(anyone): Improve this method
     showdown() {
-        this.throwIfNotInitialized();
+        this.validateInActionRound('river');
 
         let showdownHandRanks = [];
 
@@ -413,7 +498,7 @@ class PokerGame {
     }
 
     get currentPlayer() {
-        return this.players[this.turn];
+        return this.players[this.turnIdx];
     }
 
     canCurrentPlayerCall() {
@@ -465,16 +550,32 @@ class PokerGame {
         return Math.floor(Math.random() * this.deck.length);
     }
 
+    validateInActionRound(event, errMsg) {
+        this.throwIfNotInitialized();
+        if (this.actionRoundStr !== event) {
+            errMsg = errMsg || `Cannot ${event} at this point in the game.`;
+            throw new Error(errMsg);
+        }
+    }
+
+    validateNotInActionRound(event, errMsg) {
+        this.throwIfNotInitialized();
+        if (this.actionRoundStr === event) {
+            errMsg = errMsg || `Cannot ${event} at this point in the game.`;
+            throw new Error(errMsg);
+        }
+    }
+
     toString() {
         let str = `PokerGame {\n` +
         `  initialized: ${this.initialized},\n` +
         `  buyIn: ${toDollars(this.buyIn)},\n` +
         `  smallBlind: ${toDollars(this.smallBlind)},\n` +
         `  bigBlind: ${toDollars(this.bigBlind)},\n` +
-        `  dealer: ${this.dealer},\n` +
-        `  turn: ${this.turn},\n` +
+        `  dealer: ${this.dealerIdx},\n` +
+        `  turn: ${this.turnIdx},\n` +
         `  pot: ${toDollars(this.pot)},\n` +
-        `  actionRoundState: ${this.actionRoundState},\n` +
+        `  actionRound: ${this.actionRoundStr},\n` +
         `  board: ${this.board},\n` +
         `  minRaise: ${toDollars(this.minRaise)},\n` +
         `  previousBet: ${toDollars(this.previousBet)},\n` +

@@ -1,20 +1,3 @@
-const MAX_SEATS_PER_GAME = 8;
-const NUM_CARDS_PER_PLAYER = 2;
-const MAX_BUYIN_IN_CENTS = 100000;
-const RANKS = {
-    straightFlush: 8,
-    fourOfAKind: 7,
-    fullHouse: 6,
-    flush: 5,
-    straight: 4,
-    threeOfAKind: 3,
-    twoPair: 2,
-    pair: 1,
-    highCard: 0,
-};
-const NUM_CARDS_IN_DECK = 52;
-
-
 const bestHandRank = (sevenCards) => {
     let currentCombination = [];
     currentCombination.length = 5; // just for you AK :)
@@ -407,27 +390,6 @@ const toDollars = (value) => value / 100;
 const toCents = (value) => value * 100;
 
 
-// function to toggle the various methods corresponding to player actions 
-const handlePlayerAction = (action, PG) => {
-    switch (action[0]) {
-        case 'all-in':
-            PG.currentPlayer.allIn();
-            break;
-        case 'call':
-            PG.currentPlayer.call();
-            break;
-        case 'raise':
-            PG.currentPlayer.raise(action[1]);
-            break;
-        case 'fold':
-            PG.currentPlayer.fold();
-            break;
-        case 'check':
-            PG.currentPlayer.check();
-            break;
-    }
-};
-
 // takes in the card array of 2, and returns 1 string
 const beautifyCard = (card) => {
     let num = card[0].toString();
@@ -482,11 +444,6 @@ const makeFreqMap = (hand) => {
 
 
 module.exports = {
-    MAX_SEATS_PER_GAME,
-    NUM_CARDS_PER_PLAYER,
-    MAX_BUYIN_IN_CENTS,
-    RANKS,
-    NUM_CARDS_IN_DECK,
     bestHandRank,
     pickBestHandRank,
     getHandRank,
@@ -495,7 +452,6 @@ module.exports = {
     outputLogsToConsole,
     toDollars,
     toCents,
-    handlePlayerAction,
     straightFlush,
     rankToHandStr,
     beautifyCard,

@@ -1,13 +1,9 @@
+const { RANKS } = require('./constants');
 const { 
   getHandRank,
   toCents,
   toDollars,
-  makeFreqMap,
-  NUM_CARDS_IN_DECK,
-  RANKS,
 } = require('./utils');
-const { PokerGame } = require('./PokerGame');
-const { Player } = require('./Player');
 
 
 test('RANKS has the right values', () => {
