@@ -1,19 +1,20 @@
-const { beautifyCard, toDollars } = require("./utils");
+const { beautifyCard, toDollars } = require('./utils');
 
 class Player {
     constructor(id, stack, game) {
         if (id === undefined || stack === undefined || typeof game !== 'object') {
             throw new Error(`Invalid values for id=${id}, stack=${stack}, or game=${game}`);
         }
-        // All monetary values are in cents
         this.id = id;
+        // All monetary values are in cents
         this.stack = stack;
         this.game = game;
         this.cards = [[], []];
         this.actionState = '';
         this.potCommitment = 0;
+        this.totalPC = 0; // Total pot commitment. Resets only when a dealer round refreshes.
         this.inGame = true;
-        this.canRaise = true;
+        this.allowRaise = true;
         this.isAllIn = false;
         this.showdownRank = [];
     }
@@ -26,8 +27,9 @@ class Player {
 
         let newStack = this.stack - raiseAmount;
         if (newStack < 0) {
-            console.error(`Player ${this.id} cannot bet ${bet}. Stack would go negative.`);
-            return;
+            throw new Error(`Player ${this.id} cannot bet ${bet}. Stack would go negative.`);
+        } else if (newStack === 0) {
+            this.isAllIn = true;
         }
 
         // update stack and increase pot
@@ -43,6 +45,7 @@ class Player {
         } // else {} should have code here to handle edge case 1 (see bottom notes)
 
         this.potCommitment += raiseAmount;
+        this.totalPC += raiseAmount;
 
         // previous bet is updated. see bottom notes for edge case 2: second scenario assumed
         this.game.previousBet = this.potCommitment;
@@ -51,7 +54,7 @@ class Player {
         this.game.allowCheck = false;
 
         // if a raise above the min raise has occurred, allow all other players to raise again
-        this.game.players.forEach(player => player.canRaise = true);
+        this.game.players.forEach(player => player.allowRaise = true);
     }
 
     call() {
@@ -62,14 +65,16 @@ class Player {
         let callAmount = this.game.previousBet - this.potCommitment;
 
         // if callAmount called bet is larger than stack, toggles an all-in call.
-        if (callAmount > this.stack) {
+        if (callAmount >= this.stack) {
             callAmount = this.stack;
+            this.isAllIn = true;
         }
 
         // decrease stack, increase pot and increase pot commitment
         this.stack -= callAmount;
         this.game.pot += callAmount;
         this.potCommitment += callAmount;
+        this.totalPC += callAmount;
     }
 
     check() {
@@ -121,7 +126,7 @@ class Player {
             for (let i = 0; i < reversedplayers.length; i++) {
                 let player = reversedplayers[i]
                 if (player.actionState === 'raise' && !player.isAllIn) {
-                    player.canRaise = false;
+                    player.allowRaise = false;
                 }
             }
         }
@@ -133,9 +138,10 @@ class Player {
             `stack: ${toDollars(this.stack)}, ` +
             `actionState: ${this.actionState}, `+
             `potCommitment: ${toDollars(this.potCommitment)}, `+
+            `totalPC: ${toDollars(this.totalPC)}, `+
             `inGame: ${this.inGame}, `+
             `showdownRank: ${this.showdownRank}, `+
-            `canRaise: ${this.canRaise}, `+
+            `allowRaise: ${this.allowRaise}, `+
             `isAllIn: ${this.isAllIn}, `;
 
         let cardsStr = `[ ${beautifyCard(this.cards[0])}, ${beautifyCard(this.cards[1])} ]`;

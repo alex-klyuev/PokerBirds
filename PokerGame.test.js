@@ -178,7 +178,7 @@ test.skip('Example game 1', () => {
     actionState: 'SB',
     potCommitment: SB_AMOUNT,
     inGame: true,
-    canRaise: true,
+    allowRaise: true,
     isAllIn: false,
     showdownRank: [],
   });
@@ -190,7 +190,7 @@ test.skip('Example game 1', () => {
     actionState: 'BB',
     potCommitment: BB_AMOUNT,
     inGame: true,
-    canRaise: true,
+    allowRaise: true,
     isAllIn: false,
     showdownRank: [],
   });
@@ -209,7 +209,7 @@ test.skip('Example game 1', () => {
     actionState: '',
     potCommitment: 0,
     inGame: true,
-    canRaise: true,
+    allowRaise: true,
     isAllIn: false,
     showdownRank: [],
   });
@@ -238,7 +238,7 @@ test.skip('Example game 1', () => {
     actionState: 'call',
     potCommitment: BB_AMOUNT,
     inGame: true,
-    canRaise: true,
+    allowRaise: true,
     isAllIn: false,
     showdownRank: [],
   });
@@ -258,7 +258,7 @@ test.skip('Example game 1', () => {
     actionState: 'call',
     potCommitment: BB_AMOUNT,
     inGame: true,
-    canRaise: true,
+    allowRaise: true,
     isAllIn: false,
     showdownRank: [],
   });
@@ -276,7 +276,7 @@ test.skip('Example game 1', () => {
     actionState: 'check',
     potCommitment: BB_AMOUNT,
     inGame: true,
-    canRaise: true,
+    allowRaise: true,
     isAllIn: false,
     showdownRank: [],
   });

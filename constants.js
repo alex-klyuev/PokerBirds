@@ -1,6 +1,7 @@
 const MAX_PLAYERS_PER_GAME = 8;
 const NUM_CARDS_PER_PLAYER = 2;
 const MAX_BUYIN_IN_CENTS = 100000;
+
 const RANKS = {
     straightFlush: 8,
     fourOfAKind: 7,
@@ -12,7 +13,9 @@ const RANKS = {
     pair: 1,
     highCard: 0,
 };
+
 const NUM_CARDS_IN_DECK = 52;
+
 // Yes, this could be an array (with a '-1' property lol), but it's much clearer to make it an object.
 const ACTION_ROUNDS = {
     '-1': 'uninitialized',
@@ -22,6 +25,13 @@ const ACTION_ROUNDS = {
     3: 'river'
 };
 
+const ACTION_STATES = {
+  'fold': true,
+  'check': true,
+  'call': true,
+  'raise': true,
+};
+
 module.exports = {
   MAX_PLAYERS_PER_GAME,
   NUM_CARDS_PER_PLAYER,
@@ -29,4 +39,5 @@ module.exports = {
   RANKS,
   NUM_CARDS_IN_DECK,
   ACTION_ROUNDS,
+  ACTION_STATES,
 };

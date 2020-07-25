@@ -354,44 +354,41 @@ const outputGameStatus = (PG) => {
     let outputLine5 = '';
 
     // this for loop builds the 5 lines required to show what each player has, their pot commitment, and their previous action.
-    for (let i = 0; i < PG.numPlayers; i++) {
+    for (let i = 0; i < PG.totalPlayers; i++) {
 
         // P1, P2, etc.
-        outputLine1 = outputLine1 + 'P' + i.toString() + '      ';
+        if (PG.players[i] === PG.dealer && PG.players[i] === PG.currentPlayer) {
+            outputLine1 += ('P' + i.toString() + '-D **').padEnd(8);
+        } else if (PG.players[i] === PG.dealer) {
+            outputLine1 += ('P' + i.toString() + '-D').padEnd(8);
+        } else if (PG.players[i] === PG.currentPlayer) {
+            outputLine1 += ('P' + i.toString() + ' **').padEnd(8);
+        } else {
+            outputLine1 += ('P' + i.toString()).padEnd(8);
+        }
 
         // since stack amount may vary, need to equalize the stack line to a total of 8 chars per player.
         let str = toDollars(PG.players[i].stack).toString();
-        let spaces = '';
-        for (let j = 0; j < (7 - str.length); j++) {
-            spaces += ' ';
-        }
-        outputLine2 = outputLine2 + '$' + str + spaces;
+        outputLine2 += ('$' + str).padEnd(8);
 
         // show cards only for players that are still in the game
         if (PG.players[i].inGame) {
-            outputLine3 = outputLine3 + '🂠🂠      ';
+            let pad = '🂠🂠'.padEnd(10);
+            outputLine3 += pad;
         } else {
-            outputLine3 = outputLine3 + '        ';
+            outputLine3 += ''.padEnd(8);
         }
 
         // since action word length will vary, need to equalize line to 8 chars per player
         str = PG.players[i].actionState;
-        spaces = '';
-        for (let j = 0; j < (8 - str.length); j++) {
-            spaces = spaces + ' ';
-        }
-        outputLine4 = outputLine4 + str + spaces;
+        outputLine4 += str.padEnd(8);
 
         // since pot commitment will vary, need to equalize line to 8 chars per player
         if (PG.players[i].potCommitment === 0) {
-            outputLine5 = outputLine5 + '        ';
+            outputLine5 += ''.padEnd(8);
         } else {
             str = toDollars(PG.players[i].potCommitment).toString();
-            spaces = '';
-            for (let j = 0; j < (7 - str.length); j++) {
-                spaces = spaces + ' ';
-            }
-            outputLine5 = outputLine5 + '$' + str + spaces;
+            outputLine5 += ('$' + str).padEnd(8);
         }
     }
 
@@ -426,10 +423,28 @@ const outputPlayerInquiry = (PG) => {
 
 // helper function to not have to make 2 calls all the time in game.js
 const outputLogsToConsole = (PG) => {
+    logLine();
     outputGameStatus(PG);
     outputPlayerInquiry(PG);
 };
 
+const logLine = () => console.log('\n---------------------------------------------------------------------------');
+
+const logSkipped = (players) => {
+    if (players.length === 0) {
+        return;
+    }
+    logLine();
+    console.log();
+    players.forEach((player) => {
+        console.log(`Player ${player.id} skipped bcz player is ${!player.inGame ? 'not in the game' : 'all-in'}.`)
+    });
+};
+
+const logDealer = (player) => {
+    logLine();
+    console.log(`\nPlayer ${player.id} is the dealer.`);
+};
 
 // make it easier to keep track where this is done
 const toDollars = (value) => value / 100;
@@ -496,6 +511,9 @@ module.exports = {
     outputGameStatus,
     outputPlayerInquiry,
     outputLogsToConsole,
+    logLine,
+    logDealer,
+    logSkipped,
     toDollars,
     toCents,
     straightFlush,

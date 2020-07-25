@@ -1,9 +1,11 @@
 const { MAX_BUYIN_IN_CENTS } = require('./constants');
 const {
-    outputGameStatus,
     toCents,
     toDollars,
     outputLogsToConsole,
+    logLine,
+    logDealer,
+    logSkipped,
     rankToHandStr,
 } = require('./utils');
 const { Player } = require('./Player');
@@ -31,7 +33,7 @@ const validateNumPlayers = (input) => {
         return { valid: false };
     }
 
-    return { valid: true, numPlayers: input };
+    return { valid: true, totalPlayers: input };
 };
 
 const validateBuyIn = (inputBuyIn) => {
@@ -52,7 +54,7 @@ const validateBlind = (inputBlind) => {
 
 /**
  * Validate player action.
- *   if a call, check, fold or all-in, return { valid: true, playerAction: [respective string, ''] }
+ *   if a call, check, fold or all-in, return { valid: true, playerAction: call|check|fold|all-in }
  *   if raise, return { valid: true, playerAction: 'raise', raiseAmount: raise amount in cents }
  */
 const validateAndReturnPlayerAction = (input) => {
@@ -67,7 +69,7 @@ const validateAndReturnPlayerAction = (input) => {
     switch(actionInput) {
         case 'all-':
             /* check notes
-            if (!PG.currentPlayer.canRaise) {
+            if (!PG.currentPlayer.allowRaise) {
             return { valid: false };
             } */
             return { valid: true, playerAction: 'all-in' };
@@ -127,12 +129,12 @@ const handleCommandLineInput = (input) => {
         case 0: {
             let result = validateNumPlayers(input);
             if (!result.valid) {
-                console.log('Please enter a valid number: 0 < numPlayers < 9');
+                console.log('Please enter a valid number: 0 < totalPlayers < 9');
                 return;
             }
 
             // add players
-            for (let i = 0; i < result.numPlayers; i++) {
+            for (let i = 0; i < result.totalPlayers; i++) {
                 PG.addPlayerToPosition(new Player(i, PG.buyIn, PG), i);
             }
 
@@ -207,9 +209,11 @@ const handleCommandLineInput = (input) => {
 
             // Pick random player to begin as the first dealer. Actually, dealer will be randDealer + 1 below because
             // PG.refreshDealerRound() will make dealer be the next. Doesn't matter though cause game hasn't yet started.
-            let randDealer = Math.floor(Math.random() * PG.numPlayers);
+            let randDealer = Math.floor(Math.random() * PG.totalPlayers);
             PG.setDealer(randDealer);
             PG.refreshDealerRound();
+
+            logDealer(PG.dealer);
 
             // declare the dealer, output the first game board, and announce the first turn and return
             outputLogsToConsole(PG);
@@ -221,7 +225,6 @@ const handleCommandLineInput = (input) => {
 
 
     // Handle the 4 action rounds. From now on, code will cycle between these 4 action rounds for each dealer round.
-    // TODO(anyone): Can merge preflop thru turn with river
     switch(PG.actionRoundStr) {
         case 'pre-flop':
         case 'flop':
@@ -229,15 +232,16 @@ const handleCommandLineInput = (input) => {
             let result = validateAndReturnPlayerAction(input);
             if (!result.valid) {
                 console.log('Please enter a valid input.');
+                // console.log(PG.toString());
                 return;
             }
 
             // Call method corresponding to current player action
             PG.callCurrentPlayerAction(result);
 
-            // increment turn and find the next player still in the game
-            PG.incrementTurn();
-            PG.incrementTurnToNextPlayerInGame();
+            // increment turn and find the next player still in the game, get skipped
+            let skippedPlayers = PG.incrementTurnToNextPlayerInGame();
+            logSkipped(skippedPlayers);
 
             // Check special conditions during preflop
             if (PG.actionRoundStr === 'pre-flop') {
@@ -253,34 +257,41 @@ const handleCommandLineInput = (input) => {
                 console.log(`\nPlayer ${PG.players[drResult.winnerIdx].id} wins $${toDollars(drResult.winnings)}`);
                 PG.refreshDealerRound();
 
-                // declare the dealer, output the first game board, and announce the first turn
-                console.log(`\nPlayer ${PG.players[PG.dealerIdx].id} is the dealer.`);
+                // declare the dealer
+                logDealer(PG.dealer)
 
             } else if (PG.actionRoundEnded()) {
                 let arResult = PG.getActionRoundInfo();
                 console.log(`action round ended via ${arResult.scenario} scenario`);
-                PG.refreshAndIncActionRound(); // PG.actionRoundStr will change to what's the current actionRoundStr
+                
+                // PG.actionRoundStr will change to what's the current actionRoundStr
+                let skippedPlayers = PG.refreshAndIncActionRound();
+                logSkipped(skippedPlayers);
+
                 PG[PG.actionRoundStr](); // calls PG.flop(), PG.turn() or PG.river()
             }
 
+            // TODO(anyone): Call function again if everyone's all-in or no one can play anymore?
             break;
         }
         case 'river': {
             let result = validateAndReturnPlayerAction(input);
             if (!result.valid) {
                 console.log('Please enter a valid input.');
+                // console.log(PG.toString());
                 return;
             }
 
             PG.callCurrentPlayerAction(result);
-            PG.incrementTurn();
-            PG.incrementTurnToNextPlayerInGame();
+
+            let skippedPlayers = PG.incrementTurnToNextPlayerInGame();
+            logSkipped(skippedPlayers);
 
             if (PG.dealerRoundEnded()) {
                 let drResult = PG.getDealerRoundInfoAndAddPotToDealerRoundWinner();
                 console.log(`\nPlayer ${PG.players[drResult.winnerIdx].id} wins $${toDollars(drResult.winnings)}`);
                 PG.refreshDealerRound();
-                console.log(`\nPlayer ${PG.players[PG.dealerIdx].id} is the dealer.`);
+                logDealer(PG.dealer)
 
             } else if (PG.actionRoundEnded()) {
                 PG.showdown();
@@ -292,13 +303,14 @@ const handleCommandLineInput = (input) => {
                 });
 
                 PG.refreshDealerRound();
-                // declare the dealer, output the first game board, and announce the first turn
-                console.log(`\nPlayer ${PG.players[PG.dealerIdx].id} is the dealer.`);
+                logDealer(PG.dealer)
             }
             break;
         }
     }
 
+    // console.log(PG.toString());
+    // output the game board and announce who's turn it is
     outputLogsToConsole(PG);
     return;
 };
