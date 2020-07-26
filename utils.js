@@ -347,7 +347,8 @@ const getHandRank = (hand) => {
 // committed to the pot.
 // it will also demonstrate the board and the pot.
 const outputGameStatus = (PG) => {
-    let outputLine1 = '\n';
+    let outputLine0 = '';
+    let outputLine1 = '';
     let outputLine2 = '';
     let outputLine3 = '';
     let outputLine4 = '';
@@ -356,16 +357,19 @@ const outputGameStatus = (PG) => {
     // this for loop builds the 5 lines required to show what each player has, their pot commitment, and their previous action.
     for (let i = 0; i < PG.totalPlayers; i++) {
 
-        // P1, P2, etc.
+        // print 'D *T*' under dealer when it's their turn, 'D' for dealer, '*T*' for non-dealer's turn
         if (PG.players[i] === PG.dealer && PG.players[i] === PG.currentPlayer) {
-            outputLine1 += ('P' + i.toString() + '-D **').padEnd(8);
+            outputLine0 += '*D* Turn'.padEnd(8); // dealer's turn
         } else if (PG.players[i] === PG.dealer) {
-            outputLine1 += ('P' + i.toString() + '-D').padEnd(8);
+            outputLine0 += '*D*'.padEnd(8);    // dealer
         } else if (PG.players[i] === PG.currentPlayer) {
-            outputLine1 += ('P' + i.toString() + ' **').padEnd(8);
+            outputLine0 += 'Turn'.padEnd(8);   // turn
         } else {
-            outputLine1 += ('P' + i.toString()).padEnd(8);
+            outputLine0 += ''.padEnd(8);
         }
+
+        // P1, P2, etc.
+        outputLine1 += ('P' + i.toString()).padEnd(8);
 
         // since stack amount may vary, need to equalize the stack line to a total of 8 chars per player.
         let str = toDollars(PG.players[i].stack).toString();
@@ -403,6 +407,7 @@ const outputGameStatus = (PG) => {
         }
     }
 
+    console.log(outputLine0);
     console.log(outputLine1);
     console.log(outputLine2);
     console.log(outputLine3);
@@ -428,14 +433,13 @@ const outputLogsToConsole = (PG) => {
     outputPlayerInquiry(PG);
 };
 
-const logLine = () => console.log('\n---------------------------------------------------------------------------');
+const logLine = () => console.log('\n---------------------------------------------------------------------------\n');
 
 const logSkipped = (players) => {
     if (players.length === 0) {
         return;
     }
     logLine();
-    console.log();
     players.forEach((player) => {
         console.log(`Player ${player.id} skipped bcz player is ${!player.inGame ? 'not in the game' : 'all-in'}.`)
     });
@@ -443,7 +447,7 @@ const logSkipped = (players) => {
 
 const logDealer = (player) => {
     logLine();
-    console.log(`\nPlayer ${player.id} is the dealer.`);
+    console.log(`Player ${player.id} is the dealer.`);
 };
 
 // make it easier to keep track where this is done
@@ -468,6 +472,20 @@ const beautifyCard = (card) => {
     }
 };
 
+const beautifyBoard = (board) => {
+    return board
+        .filter((card) => card !== '')
+        .map((card, idx, arr) => {
+            if (idx === 0) {
+                return '| ' + beautifyCard(card);
+            } else if (idx === arr.length - 1) {
+                return ' | ' + beautifyCard(card) + ' |';
+            } else {
+                return ' | ' + beautifyCard(card);
+            }
+        }).join('');
+};
+
 const rankToHandStr = (rank) => {
     switch(rank) {
         case 8:
@@ -488,6 +506,13 @@ const rankToHandStr = (rank) => {
             return 'Pair';
         default:
             return 'High Card';
+    }
+};
+
+const handleIfGameEnds = (gameEnded) => {
+    if (gameEnded) {
+        console.log('\nGame ended. Thanks for playing!');
+        process.exit();
     }
 };
 
@@ -519,5 +544,7 @@ module.exports = {
     straightFlush,
     rankToHandStr,
     beautifyCard,
+    beautifyBoard,
+    handleIfGameEnds,
     makeFreqMap,
 };

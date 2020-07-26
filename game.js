@@ -7,6 +7,8 @@ const {
     logDealer,
     logSkipped,
     rankToHandStr,
+    beautifyBoard,
+    handleIfGameEnds,
 } = require('./utils');
 const { Player } = require('./Player');
 const { PokerGame } = require('./pokerGame');
@@ -211,11 +213,11 @@ const handleCommandLineInput = (input) => {
             // PG.refreshDealerRound() will make dealer be the next. Doesn't matter though cause game hasn't yet started.
             let randDealer = Math.floor(Math.random() * PG.totalPlayers);
             PG.setDealer(randDealer);
+
             PG.refreshDealerRound();
 
-            logDealer(PG.dealer);
-
             // declare the dealer, output the first game board, and announce the first turn and return
+            logDealer(PG.dealer);
             outputLogsToConsole(PG);
 
             CLFState++; // CLFState will never be used again. RIP
@@ -232,7 +234,6 @@ const handleCommandLineInput = (input) => {
             let result = validateAndReturnPlayerAction(input);
             if (!result.valid) {
                 console.log('Please enter a valid input.');
-                // console.log(PG.toString());
                 return;
             }
 
@@ -252,12 +253,32 @@ const handleCommandLineInput = (input) => {
             // and all others fold.
             if (PG.dealerRoundEnded()) {
                 let drResult = PG.getDealerRoundInfoAndAddPotToDealerRoundWinner();
-
-                // set everything through the blinds up for next round and output to the board
                 console.log(`\nPlayer ${PG.players[drResult.winnerIdx].id} wins $${toDollars(drResult.winnings)}`);
-                PG.refreshDealerRound();
+
+                // set everything through the blinds up for next round if game hasn't ended
+                let { gameEnded } = PG.refreshDealerRound();
+                handleIfGameEnds(gameEnded);
 
                 // declare the dealer
+                logDealer(PG.dealer)
+
+            } else if (PG.actionRoundEndedViaAllInScenario()) {
+
+                console.log(`all action rounds ended via an all-in scenario`);
+                PG.finishActionRounds();
+                console.log(`\n\nFinal Board: ${beautifyBoard(PG.board)}`);
+                PG.showdown();
+
+                // output winner(s) and winning hand(s)
+                logLine();
+                PG.winHandRanks.forEach(rank => {
+                    // state the winner and how they won
+                    console.log(`Player ${PG.players[rank.playerIndex].id} won with a ${rankToHandStr(rank[0])}`);
+                });
+
+                let { gameEnded } = PG.refreshDealerRound();
+                handleIfGameEnds(gameEnded);
+
                 logDealer(PG.dealer)
 
             } else if (PG.actionRoundEnded()) {
@@ -278,7 +299,6 @@ const handleCommandLineInput = (input) => {
             let result = validateAndReturnPlayerAction(input);
             if (!result.valid) {
                 console.log('Please enter a valid input.');
-                // console.log(PG.toString());
                 return;
             }
 
@@ -290,26 +310,31 @@ const handleCommandLineInput = (input) => {
             if (PG.dealerRoundEnded()) {
                 let drResult = PG.getDealerRoundInfoAndAddPotToDealerRoundWinner();
                 console.log(`\nPlayer ${PG.players[drResult.winnerIdx].id} wins $${toDollars(drResult.winnings)}`);
-                PG.refreshDealerRound();
+
+                let { gameEnded } = PG.refreshDealerRound();
+                handleIfGameEnds(gameEnded);
+
                 logDealer(PG.dealer)
 
-            } else if (PG.actionRoundEnded()) {
+            } else if (PG.actionRoundEndedViaAllInScenario() || PG.actionRoundEnded()) {
                 PG.showdown();
 
                 // output winner(s) and winning hand(s)
+                logLine();
                 PG.winHandRanks.forEach(rank => {
                     // state the winner and how they won
                     console.log(`Player ${PG.players[rank.playerIndex].id} won with a ${rankToHandStr(rank[0])}`);
                 });
 
-                PG.refreshDealerRound();
+                let { gameEnded } = PG.refreshDealerRound();
+                handleIfGameEnds(gameEnded);
+
                 logDealer(PG.dealer)
             }
             break;
         }
     }
 
-    // console.log(PG.toString());
     // output the game board and announce who's turn it is
     outputLogsToConsole(PG);
     return;

@@ -3,12 +3,14 @@ const {
     NUM_CARDS_PER_PLAYER,
     MAX_BUYIN_IN_CENTS,
     ACTION_ROUNDS,
+    NUM_ACTION_ROUND_DEALINGS,
 } = require('./constants');
 const {
     toDollars,
     bestHandRank,
     pickBestHandRanks,
     beautifyCard,
+    beautifyBoard,
 } = require('./utils');
 
 // TODO(anyone): removePlayer
@@ -319,8 +321,14 @@ class PokerGame {
         }
     }
 
+    burn() { // lol
+        this.validateNotInActionRound('pre-flop');
+        this.deck.splice(this.randDeckIdx(), 1);
+    }
+
     flop() {
         this.validateInActionRound('flop');
+        this.burn();
         this.addToBoard();
         this.addToBoard();
         this.addToBoard();
@@ -328,16 +336,69 @@ class PokerGame {
 
     turn() {
         this.validateInActionRound('turn');
+        this.burn();
         this.addToBoard();
     }
 
     river() {
         this.validateInActionRound('river');
+        this.burn();
         this.addToBoard();
     }
 
     get actionRoundStr() {
         return ACTION_ROUNDS[this.actionRound];
+    }
+
+    get allInPlayersCounter() {
+        return this.players.reduce((acc, player) => (player.isAllIn ? acc + 1 : acc), 0);
+    }
+
+    get allInPlayers() {
+        return this.players.filter((player) => player.isAllIn);
+    }
+
+    /**
+     * @returns true if
+     *   - Everyone is all-in
+     *   - Everyone except one person is all-in. That person should have matched the highest other potCommitment.
+     */
+    actionRoundEndedViaAllInScenario() {
+        this.throwIfNotInitialized();
+        if (this.allInPlayersCounter === this.numPlayersInGame) {
+            return true;
+        }
+
+        if (this.allInPlayersCounter === this.numPlayersInGame - 1) {
+            let player = this.players.filter(player => player.inGame && !player.isAllIn)[0];
+            let allInPlayers = this.allInPlayers;
+            allInPlayers.sort((p1, p2) => p2.potCommitment - p1.potCommitment);
+            let allInPlayerHighestPotCommitment = allInPlayers[0];
+            return player.potCommitment >= allInPlayerHighestPotCommitment.potCommitment;
+        }
+
+        return false;
+    }
+
+    /**
+     * Finish action rounds for current dealer round by calling this.flop(), this.turn() and this.river().
+     * Start from the earliest possible method.
+     */
+    finishActionRounds() {
+        if (!this.actionRoundEndedViaAllInScenario()) {
+            throw new Error('ActionRound has not ended via an all-in scenario.');
+        }
+
+        if (this.actionRoundStr === 'pre-flop') {
+            this.actionRound++;
+        }
+
+        let numDealingsRemaining = NUM_ACTION_ROUND_DEALINGS - this.actionRound;
+        for (let i = 0; i <= numDealingsRemaining; i++) {
+            this[this.actionRoundStr]();
+            this.actionRound++;
+        }
+        this.actionRound = 3; // set current actionRound to be river, as the above for-loop increments it to 4
     }
 
     get noRaiseScenarioCounter() {
@@ -468,10 +529,13 @@ class PokerGame {
         
         this.actionRound++;
         return skipped; // TODO(anyone): Move the previus 13 lines around to make sequential sense?
-    };
+    }
 
-    // restart the following dealer round
-    // TODO(anyone): Figure out if should make this.pot = 0 here
+    /**
+     * Restart the following dealer round.
+     * TODO(anyone): Figure out if should make this.pot = 0 here
+     * @returns { gameEnded: boolean } - whether game ended if there's only 1 person left that won all the $
+     */
     refreshDealerRound() {
         this.throwIfNotInitialized();
 
@@ -503,9 +567,19 @@ class PokerGame {
         this.buildDeck();
         this.dealCards();
 
-        // increment dealer and loop around players array
-        this.dealerIdx++;
-        this.dealerIdx %= this.totalPlayers;
+        if (this.numPlayersInGame <= 1) {
+            return { gameEnded: true };
+        }
+
+        // increment dealer and loop around players array until we find a player inGame
+        for (let i = 0; i < this.totalPlayers; i++) {
+            this.dealerIdx++;
+            this.dealerIdx %= this.totalPlayers;
+
+            if (this.players[this.dealerIdx].inGame) {
+                break;
+            }
+        }
 
         // set turn to small blind, next in game after dealer
         this.turnIdx = this.dealerIdx;
@@ -518,6 +592,8 @@ class PokerGame {
         if (this.currentPlayer.actionState === 'SB' && this.smallBlind === this.bigBlind) {
             this.allowCheck = true;
         }
+
+        return { gameEnded: false };
     }
 
     showdown() {
@@ -630,7 +706,7 @@ class PokerGame {
         `  turnIdx: ${this.turnIdx},\n` +
         `  pot: ${toDollars(this.pot)},\n` +
         `  actionRoundStr: ${this.actionRoundStr},\n` +
-        `  board: ${this.board.length === 0 ? '' : this.board},\n` +
+        `  board: ${beautifyBoard(this.board)},\n` +
         `  minRaise: $${toDollars(this.minRaise)},\n` +
         `  previousBet: $${toDollars(this.previousBet)},\n` +
         `  allowCheck: ${this.allowCheck},\n` +

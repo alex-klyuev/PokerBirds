@@ -25,6 +25,8 @@ const ACTION_ROUNDS = {
     3: 'river'
 };
 
+const NUM_ACTION_ROUND_DEALINGS = 3;
+
 const ACTION_STATES = {
   'fold': true,
   'check': true,
@@ -39,5 +41,6 @@ module.exports = {
   RANKS,
   NUM_CARDS_IN_DECK,
   ACTION_ROUNDS,
+  NUM_ACTION_ROUND_DEALINGS,
   ACTION_STATES,
 };
