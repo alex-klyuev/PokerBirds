@@ -28,7 +28,7 @@ test(`new PokerGame() has correct values after immediate creation`, () => {
   expect(pg.bigBlind).toBe(-1);
   expect(pg.dealerIdx).toBe(0);
   expect(pg.turnIdx).toBe(0);
-  expect(pg.pot).toBe(0);
+  expect(Array.isArray(pg.pots)).toBe(true);
   expect(pg.actionRound).toBe(-1);
   expect(pg.board).toEqual(['', '', '', '', '']);
   expect(pg.deck).toEqual([]);
@@ -104,7 +104,7 @@ test.skip('Showdown rank should have 6 cards', () => {
   pg.addToBoard();
   expect(pg.board.filter((val) => val !== '').length).toBe(5);
 
-  pg.showdown();
+  pg.getShowdownInfoAndAssignWinnings();
   for (let i = 0; i < pg.players.length; i++) {
     expect(pg.players[i].showdownRank.length).toBe(6);
   }
@@ -330,7 +330,7 @@ test.skip('run monte carlo simulation', () => {
       PG.addToBoard();
       PG.addToBoard();
       assert(PG.board.length === 5);
-      PG.showdown();
+      PG.getShowdownInfoAndAssignWinnings();
   
       for (let i = 0; i < PG.players.length; i++) {
           assert(PG.players[i].showdownRank.length === 6);

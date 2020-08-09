@@ -63,12 +63,13 @@ const pickBestHandRanks = (handRanks) => {
                 return rank2[i] - rank1[i];
             }
         }
+        return 0;
     });
 
     // get how many same handRanks there are starting from comparing
     //   handRanks[0] with handRanks[1],
     //   handRanks[1] with handRanks[2], ...
-    // that will give you an index for handRanks to slice until, through which each handRank from 0 to that idx is the same
+    // this will get an index for handRanks to slice until, through which each handRank from 0 to that idx is the same
     // as the previous
     let numWinRanks = 1;
     while (numWinRanks < handRanks.length && ranksEqual(handRanks[numWinRanks - 1], handRanks[numWinRanks])) {
@@ -414,7 +415,12 @@ const outputGameStatus = (PG) => {
     console.log(outputLine4);
     console.log(outputLine5);
     console.log(outputLine6);
-    console.log('Pot: $' + toDollars(PG.pot).toString());
+
+    let potsStr = `Pots:\n` + PG.pots.map((pot, idx) => {
+        return ` ${idx}: ${pot.toString()}\n`
+    }).join('');
+
+    console.log(potsStr);
 };
 
 

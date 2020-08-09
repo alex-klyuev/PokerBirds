@@ -3,7 +3,7 @@ const {
     NUM_CARDS_PER_PLAYER,
     MAX_BUYIN_IN_CENTS,
     ACTION_ROUNDS,
-    NUM_ACTION_ROUND_DEALINGS,
+    NUM_ACTION_ROUND_DEALS,
 } = require('./constants');
 const {
     toDollars,
@@ -12,6 +12,7 @@ const {
     beautifyCard,
     beautifyBoard,
 } = require('./utils');
+const { Pot } = require('./Pot');
 
 // TODO(anyone): removePlayer
 // TODO(anyone): standupPlayer
@@ -33,7 +34,7 @@ class PokerGame {
         this.numTurnIncrements = 0;
         // TODO(anyone): Change pot to pots (an array, probably containing playerIdxs that can win that pot). 
         // TODO(anyone): Create an actionRoundPot to display both?
-        this.pot = 0;
+        this.pots = [new Pot(this)];
         // -1 = prev variables uninitialized, 0 = pre-flop, 1 = flop, 2 = turn, 3 = river
         this.actionRound = -1;
         this.board = ['', '', '', '', ''];
@@ -206,10 +207,6 @@ class PokerGame {
         return skipped;
     }
 
-    needToIncrementTurnToNextPlayerInGame() {
-        
-    }
-
     // assign 2 cards from the deck to each player
     // only needs to run once at the beginning of each dealer round
     dealCards() {
@@ -360,8 +357,8 @@ class PokerGame {
 
     /**
      * @returns true if
-     *   - Everyone is all-in
-     *   - Everyone except one person is all-in. That person should have matched the highest other potCommitment.
+     *   - Everyone is all-in, OR
+     *   - Everyone except one person is all-in. That person should be in every Pot's potentialWinners Set
      */
     actionRoundEndedViaAllInScenario() {
         this.throwIfNotInitialized();
@@ -370,11 +367,8 @@ class PokerGame {
         }
 
         if (this.allInPlayersCounter === this.numPlayersInGame - 1) {
-            let player = this.players.filter(player => player.inGame && !player.isAllIn)[0];
-            let allInPlayers = this.allInPlayers;
-            allInPlayers.sort((p1, p2) => p2.potCommitment - p1.potCommitment);
-            let allInPlayerHighestPotCommitment = allInPlayers[0];
-            return player.potCommitment >= allInPlayerHighestPotCommitment.potCommitment;
+            let player = this.players.find(player => player.inGame && !player.isAllIn);
+            return this.pots.every((pot) => pot.playerIdxInPotentialWinners(player.id));
         }
 
         return false;
@@ -388,14 +382,15 @@ class PokerGame {
         if (!this.actionRoundEndedViaAllInScenario()) {
             throw new Error('ActionRound has not ended via an all-in scenario.');
         }
+        this.validateNotInActionRound('river');
 
         if (this.actionRoundStr === 'pre-flop') {
             this.actionRound++;
         }
 
-        let numDealingsRemaining = NUM_ACTION_ROUND_DEALINGS - this.actionRound;
+        let numDealingsRemaining = NUM_ACTION_ROUND_DEALS - this.actionRound;
         for (let i = 0; i <= numDealingsRemaining; i++) {
-            this[this.actionRoundStr]();
+            this[this.actionRoundStr](); // call the current actionRoundStr, e.g. this["flop"]()
             this.actionRound++;
         }
         this.actionRound = 3; // set current actionRound to be river, as the above for-loop increments it to 4
@@ -467,14 +462,18 @@ class PokerGame {
     }
 
     /**
-     * Ends the dealer round if everyone except one person has folded and assigns pot to that person (i.e. the winner).
-     * This is one of two ways a dealer round can end - the other is with a showdown that has its own function.
+     * End dealer round if everyone except 1 person folded. Assign pot to that person (i.e. the winner). No showdown.
+     *
+     * This is one of three ways a dealer round can end. The other two are
+     *   (1) all-in scenario and
+     *   (2) river action round ending
+     * The above 2 are handled by separate functions.
      * @returns {
      *    winnerIdx (optional number): index of player that won the dealer round,
      *    winnings (optional number): pot winnings (in cents)
      * }
      */
-    getDealerRoundInfoAndAddPotToDealerRoundWinner() {
+    getDealerRoundInfoAndAssignWinnings() {
         this.throwIfNotInitialized();
         if (!this.dealerRoundEnded()) {
             throw new Error(`Dealer round hasn't ended.`);
@@ -488,11 +487,15 @@ class PokerGame {
             else { winnerIdx = idx; }
         });
 
-        // move pot to winner's stack
-        this.players[winnerIdx].stack += this.pot;
-        let winnings = this.pot;
-        this.pot = 0;
+        // move pot to winner's stack. there should only be one pot because everyone folded except one person
+        let winnings = this.pots[0].amount;
+        this.players[winnerIdx].stack += winnings;
+        this.resetPots();
         return { winnerIdx, winnings };
+    }
+
+    resetPots() {
+        this.pots = [new Pot(this)];
     }
 
     /**
@@ -533,7 +536,6 @@ class PokerGame {
 
     /**
      * Restart the following dealer round.
-     * TODO(anyone): Figure out if should make this.pot = 0 here
      * @returns { gameEnded: boolean } - whether game ended if there's only 1 person left that won all the $
      */
     refreshDealerRound() {
@@ -541,17 +543,15 @@ class PokerGame {
 
         this.actionRound = 0;
         this.winHandRanks = null;
-
-        // refresh all of these variables
+        this.resetPots();
         this.players.forEach((player) => {
-            player.cards = [[], []];
+            player.cards = [null, null];
             player.actionState = '';
             player.potCommitment = 0;
-            player.totalPC = 0;
             player.inGame = true;
             player.allowRaise = true;
             player.isAllIn = false;
-            player.showdownRank = [];
+            player.showdownRank = null;
 
             // If a player lost their money, they stay out. Can clear them out completely later.
             // Doesn't really matter though because browser version will have option to buy back in, leave, etc.
@@ -581,10 +581,9 @@ class PokerGame {
             }
         }
 
-        // set turn to small blind, next in game after dealer
+        // set turn to dealer, increment turn to next player in game, and post blinds
         this.turnIdx = this.dealerIdx;
         this.incrementTurnToNextPlayerInGame();
-
         this.postBlinds();
 
         // edge case scenario where there are only 2 players and sb = bb, first player to act is sb
@@ -596,12 +595,20 @@ class PokerGame {
         return { gameEnded: false };
     }
 
-    showdown() {
+    /**
+     * For each pot, determine which players won and how much. Add winnings to each player's stack.
+     * @returns array of objects built from each pot
+     *   [
+     *     {
+     *        winnings: how much each player won,
+     *        winners: [winning player indexes]
+     *     }, ...
+     *   ]
+     */
+    getShowdownInfoAndAssignWinnings() {
         this.validateInActionRound('river');
 
-        let showdownHandRanks = [];
-
-        // get winning hand ranks and assign to this.winHandRanks
+        // for each player in game, get their bestHandRank and assign to player.showdownRank
         this.players.forEach((player, idx) => {
             if (player.inGame) {
                 let sevenCards = [...this.board, ...player.cards];
@@ -609,17 +616,36 @@ class PokerGame {
                 // take player's seven showdown cards and return the rank of the best five cards
                 player.showdownRank = bestHandRank(sevenCards);
                 player.showdownRank.playerIndex = idx; // just for you AK ;)
-                showdownHandRanks.push(player.showdownRank);
             }
         });
-        this.winHandRanks = pickBestHandRanks(showdownHandRanks);
 
-        // add pot / numWinners to every winner, reset pot
-        let winAmount = this.pot / this.winHandRanks.length;
-        this.winHandRanks.forEach((rank) => {
-            this.players[rank.playerIndex].stack += winAmount;
+        // for each Pot's potentialWinners Set:
+        //  - get each potential winner's bestHandRank (player.showdownRank)
+        //  - pick the best players' showdownRank
+        //  - assign to pot.winHandRanks array
+        this.pots.forEach((pot) => {
+            let potShowdownRanks = Array.from(pot.potentialWinners.values()).map((pIdx) => this.players[pIdx].showdownRank);
+            pot.winHandRanks = pickBestHandRanks(potShowdownRanks);
         });
-        this.pot = 0;
+
+        let result = [];
+
+        // for each pot, divide its amount by the winHandRanks' length and add that fraction to each winner
+        // as you're doing the above, build up the result array that will be returned
+        this.pots.forEach((pot) => {
+            // add pot / numWinners to every winner, reset pot
+            let winnings = pot.amount / pot.winHandRanks.length;
+            let resultObj = { winnings, winners: [] };
+            result.push(resultObj);
+
+            pot.winHandRanks.forEach((rank) => {
+                this.players[rank.playerIndex].stack += winnings;
+                resultObj.winners.push(rank.playerIndex);
+            });
+        })
+
+        this.resetPots();
+        return result;
     }
 
     canCurrentPlayerCheck() {
@@ -656,20 +682,21 @@ class PokerGame {
     canCurrentPlayerRaiseBy(cents) {
         this.throwIfNotInitialized();
 
-        // second input: check all-in edge case scenario,
+        // check all-in edge case scenarios
+        //   1. When there was a previous player that went all in but their raise wasn't enough to cover the minRaise
+        //   2. If raise is an all-in
+        if (!this.currentPlayer.allowRaise) {
+            return false;
+        } else if (cents === this.currentPlayer.stack) {
+            return true;
+        }
+
         // verify that the raise is an increment of the small blind, equal or above the minimum raise,
         // and less than or equal to the player's stack. exception is made if player bets stack; then bet gets through
         // regardless of the min raise.
-        if (!this.currentPlayer.allowRaise) {
-            return false;
-        }
-
-        if (cents === this.currentPlayer.stack) {
-            return true;
-        }
-        if (cents % this.smallBlind !== 0 ||
-            cents < this.previousBet + this.minRaise ||
-            cents > this.currentPlayer.stack + this.currentPlayer.potCommitment) {
+        if (cents % this.smallBlind !== 0
+            || cents < this.previousBet + this.minRaise
+            || cents > this.currentPlayer.stack + this.currentPlayer.potCommitment) {
             return false;
         }
 
@@ -704,13 +731,14 @@ class PokerGame {
         `  bigBlind: $${toDollars(this.bigBlind)},\n` +
         `  dealerIdx: ${this.dealerIdx},\n` +
         `  turnIdx: ${this.turnIdx},\n` +
-        `  pot: ${toDollars(this.pot)},\n` +
+        `  pot: ${this.pots.map((pot, idx) => {
+            return ` ${idx}: ${pot.toString()}\n`
+        }).join('')},\n` +
         `  actionRoundStr: ${this.actionRoundStr},\n` +
         `  board: ${beautifyBoard(this.board)},\n` +
         `  minRaise: $${toDollars(this.minRaise)},\n` +
         `  previousBet: $${toDollars(this.previousBet)},\n` +
-        `  allowCheck: ${this.allowCheck},\n` +
-        `  winHandRanks: ${this.winHandRanks},\n`;
+        `  allowCheck: ${this.allowCheck},\n`;
 
         let deckStr = `  deck: ${this.deck.map((card, idx) => {
             if (idx === 0) {

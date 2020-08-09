@@ -1,4 +1,4 @@
-const { MAX_BUYIN_IN_CENTS } = require('./constants');
+const { MAX_BUYIN_IN_CENTS, PREGAME_ROUNDS } = require('./constants');
 const {
     toCents,
     toDollars,
@@ -21,7 +21,7 @@ const { PokerGame } = require('./pokerGame');
  */
 
 const PG = new PokerGame();
-let CLFState = 0;
+let pregame = 0;
 
 // AUXILIARY COMMAND LINE FUNCTIONS: VALIDATE PLAYER INPUT AND THEN RETURN OBJECTS THAT ARE USED IN THE CLF
 
@@ -122,13 +122,13 @@ const handleCommandLineInput = (input) => {
     }
 
     /**
-     * CLFState:
+     * pregame:
      *  0-4 (inclusive) is the PRE-GAME (at the Bird House on Friday). Runs once before the game begins.
      *  5 runs the actual Poker Game.
      */
-    switch(CLFState) {
+    switch(PREGAME_ROUNDS[pregame]) {
         // validate number of players and create players
-        case 0: {
+        case 'set numPlayers': {
             let result = validateNumPlayers(input);
             if (!result.valid) {
                 console.log('Please enter a valid number: 0 < totalPlayers < 9');
@@ -141,7 +141,7 @@ const handleCommandLineInput = (input) => {
             }
 
             // console logs for next block needs to occur within previous if statement
-            CLFState++;
+            pregame++;
             console.log(`\nWelcome to the game, players 0 through ${PG.players.length - 1}. Here are the game settings:`);
             console.log('Buy-ins must be in dollar increments. Blinds and bets can be in increments of cents,');
             console.log('but be sure to input them as decimals. The small blind will be the smallest chip size,');
@@ -150,7 +150,7 @@ const handleCommandLineInput = (input) => {
             return;
         }
         // validate and set buy-in
-        case 1: {
+        case 'set buyIn': {
             let result = validateBuyIn(input);
             if (!result.valid) {
                 console.error('Please enter a valid buy-in: $0 < buy-in <= $1000');
@@ -165,12 +165,12 @@ const handleCommandLineInput = (input) => {
             PG.players.forEach((player) => player.stack = PG.buyIn);
 
             // iterate state and ask next question
-            CLFState++;
+            pregame++;
             console.log('What will the small blind be?');
             return;
         }
         // validate and set small blind
-        case 2: {
+        case 'set SB': {
             let result = validateBlind(input);
             if (!result.valid) {
                 console.error('Please enter a valid small blind: $0 < SB, and SB <= buy-in / 20');
@@ -181,12 +181,12 @@ const handleCommandLineInput = (input) => {
                 return;
             }
 
-            CLFState++;
+            pregame++;
             console.log('What will the big blind be?');
             return;
         }
         // validate and set big blind, set global variables, and start dealer round
-        case 3: {
+        case 'set BB': {
             let result = validateBlind(input);
             if (!result.valid) {
                 console.error('Please enter a valid big blind: (BB % SB) = 0, BB >= SB, and BB <= buy-in / 20');
@@ -220,7 +220,7 @@ const handleCommandLineInput = (input) => {
             logDealer(PG.dealer);
             outputLogsToConsole(PG);
 
-            CLFState++; // CLFState will never be used again. RIP
+            pregame++; // Pregame's over. Let's game!
             return;
         }
     }
@@ -249,11 +249,11 @@ const handleCommandLineInput = (input) => {
                 PG.preflopAllowCheckForSBAndOrBB();
             }
 
-            // Checking if dealer round is done comes before action round because of edge case where one player checks
+            // Checking if dealer round is done before action round because of edge case where one player checks
             // and all others fold.
             if (PG.dealerRoundEnded()) {
-                let drResult = PG.getDealerRoundInfoAndAddPotToDealerRoundWinner();
-                console.log(`\nPlayer ${PG.players[drResult.winnerIdx].id} wins $${toDollars(drResult.winnings)}`);
+                let drInfo = PG.getDealerRoundInfoAndAssignWinnings();
+                console.log(`\nPlayer ${PG.players[drInfo.winnerIdx].id} wins $${toDollars(drInfo.winnings)}`);
 
                 // set everything through the blinds up for next round if game hasn't ended
                 let { gameEnded } = PG.refreshDealerRound();
@@ -267,23 +267,26 @@ const handleCommandLineInput = (input) => {
                 console.log(`all action rounds ended via an all-in scenario`);
                 PG.finishActionRounds();
                 console.log(`\n\nFinal Board: ${beautifyBoard(PG.board)}`);
-                PG.showdown();
+                let sdInfo = PG.getShowdownInfoAndAssignWinnings();
 
                 // output winner(s) and winning hand(s)
                 logLine();
-                PG.winHandRanks.forEach(rank => {
-                    // state the winner and how they won
-                    console.log(`Player ${PG.players[rank.playerIndex].id} won with a ${rankToHandStr(rank[0])}`);
+                sdInfo.forEach(({ winnings, winners }) => {
+                    // state the winner, how much they won, and with what hand
+                    winners.forEach((winnerIdx) => {
+                        let winnerPlayer = PG.players[winnerIdx];
+                        console.log(`Player ${winnerPlayer.id} won $${toDollars(winnings)} with a `
+                            + `${rankToHandStr(winnerPlayer.showdownRank[0])}`);
+                    });
                 });
 
                 let { gameEnded } = PG.refreshDealerRound();
                 handleIfGameEnds(gameEnded);
-
                 logDealer(PG.dealer)
 
             } else if (PG.actionRoundEnded()) {
-                let arResult = PG.getActionRoundInfo();
-                console.log(`action round ended via ${arResult.scenario} scenario`);
+                let arInfo = PG.getActionRoundInfo();
+                console.log(`action round ended via ${arInfo.scenario} scenario`);
                 
                 // PG.actionRoundStr will change to what's the current actionRoundStr
                 let skippedPlayers = PG.refreshAndIncActionRound();
@@ -292,7 +295,6 @@ const handleCommandLineInput = (input) => {
                 PG[PG.actionRoundStr](); // calls PG.flop(), PG.turn() or PG.river()
             }
 
-            // TODO(anyone): Call function again if everyone's all-in or no one can play anymore?
             break;
         }
         case 'river': {
@@ -308,27 +310,29 @@ const handleCommandLineInput = (input) => {
             logSkipped(skippedPlayers);
 
             if (PG.dealerRoundEnded()) {
-                let drResult = PG.getDealerRoundInfoAndAddPotToDealerRoundWinner();
-                console.log(`\nPlayer ${PG.players[drResult.winnerIdx].id} wins $${toDollars(drResult.winnings)}`);
+                let drInfo = PG.getDealerRoundInfoAndAssignWinnings();
+                console.log(`\nPlayer ${PG.players[drInfo.winnerIdx].id} wins $${toDollars(drInfo.winnings)}`);
 
                 let { gameEnded } = PG.refreshDealerRound();
                 handleIfGameEnds(gameEnded);
-
                 logDealer(PG.dealer)
 
             } else if (PG.actionRoundEndedViaAllInScenario() || PG.actionRoundEnded()) {
-                PG.showdown();
+                let sdInfo = PG.getShowdownInfoAndAssignWinnings();
 
                 // output winner(s) and winning hand(s)
                 logLine();
-                PG.winHandRanks.forEach(rank => {
-                    // state the winner and how they won
-                    console.log(`Player ${PG.players[rank.playerIndex].id} won with a ${rankToHandStr(rank[0])}`);
+                sdInfo.forEach(({ winnings, winners }) => {
+                    // state the winner, how much they won, and with what hand
+                    winners.forEach((winnerIdx) => {
+                        let winnerPlayer = PG.players[winnerIdx];
+                        console.log(`Player ${winnerPlayer.id} won ${winnings} with a ` +
+                            `${rankToHandStr(winnerPlayer.showdownRank[0])}`);
+                    });
                 });
 
                 let { gameEnded } = PG.refreshDealerRound();
                 handleIfGameEnds(gameEnded);
-
                 logDealer(PG.dealer)
             }
             break;

@@ -9,14 +9,13 @@ class Player {
         // All monetary values are in cents
         this.stack = stack;
         this.game = game;
-        this.cards = [[], []];
+        this.cards = [null, null];
         this.actionState = '';
         this.potCommitment = 0;
-        this.totalPC = 0; // Total pot commitment. Resets only when a dealer round refreshes.
         this.inGame = true;
         this.allowRaise = true;
         this.isAllIn = false;
-        this.showdownRank = [];
+        this.showdownRank = null;
     }
 
     // the raise function is the only one of the four actions that depends on a numerical input from the user,
@@ -34,7 +33,14 @@ class Player {
 
         // update stack and increase pot
         this.stack = newStack;
-        this.game.pot += raiseAmount;
+
+        // TODO FIXME: Account for all pots and place bet where it belongs
+        let pot = this.game.pots[0];
+        pot.amount += raiseAmount;
+        pot.playerCommitment = raiseAmount;
+        pot.playerCommitments.set(this.id, (pot.playerCommitments.get(this.id) || 0) + raiseAmount)
+        pot.potentialWinners = new Set();
+        pot.potentialWinners.add(this.id);
 
         this.actionState = 'raise';
 
@@ -45,7 +51,6 @@ class Player {
         } // else {} should have code here to handle edge case 1 (see bottom notes)
 
         this.potCommitment += raiseAmount;
-        this.totalPC += raiseAmount;
 
         // previous bet is updated. see bottom notes for edge case 2: second scenario assumed
         this.game.previousBet = this.potCommitment;
@@ -72,9 +77,14 @@ class Player {
 
         // decrease stack, increase pot and increase pot commitment
         this.stack -= callAmount;
-        this.game.pot += callAmount;
+
+        // TODO FIXME
+        let pot = this.game.pots[0];
+        pot.amount += callAmount;
+        pot.playerCommitments.set(this.id, (pot.playerCommitments.get(this.id) || 0) + callAmount);
+        pot.potentialWinners.add(this.id);
+
         this.potCommitment += callAmount;
-        this.totalPC += callAmount;
     }
 
     check() {
@@ -87,6 +97,7 @@ class Player {
         this.inGame = false;
         // set this equal to 0 so it doesn't display on the game output
         this.potCommitment = 0;
+        this.game.pots.forEach((pot) => pot.potentialWinners.delete(this.id));
     }
 
     allIn() {
@@ -138,7 +149,6 @@ class Player {
             `stack: ${toDollars(this.stack)}, ` +
             `actionState: ${this.actionState}, `+
             `potCommitment: ${toDollars(this.potCommitment)}, `+
-            `totalPC: ${toDollars(this.totalPC)}, `+
             `inGame: ${this.inGame}, `+
             `showdownRank: ${this.showdownRank}, `+
             `allowRaise: ${this.allowRaise}, `+
