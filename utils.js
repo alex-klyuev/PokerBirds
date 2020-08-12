@@ -417,7 +417,7 @@ const outputGameStatus = (PG) => {
     console.log(outputLine6);
 
     let potsStr = `Pots:\n` + PG.pots.map((pot, idx) => {
-        return ` ${idx}: ${pot.toString()}\n`
+        return `  ${idx}: ${pot.toString()}\n`
     }).join('');
 
     console.log(potsStr);

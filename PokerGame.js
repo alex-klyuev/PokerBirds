@@ -6,6 +6,7 @@ const {
     NUM_ACTION_ROUND_DEALS,
 } = require('./constants');
 const {
+    toCents,
     toDollars,
     bestHandRank,
     pickBestHandRanks,
@@ -30,6 +31,8 @@ class PokerGame {
 
         // Game state variables that change per action & dealer round. Monetary values are in cents.
         this.dealerIdx = 0;
+        this.smallBlindIdx = 0;
+        this.bigBlindIdx = 0;
         this.turnIdx = 0;
         this.numTurnIncrements = 0;
         // TODO(anyone): Change pot to pots (an array, probably containing playerIdxs that can win that pot). 
@@ -64,7 +67,7 @@ class PokerGame {
      */
     setBuyIn(val) {
         if (val < 1 || val > MAX_BUYIN_IN_CENTS) {
-            console.error(`Cannot initialize buy-in=${val}. Should be 1 <= val <= ${toDollars(MAX_BUYIN_IN_CENTS)}.`);
+            console.error(`Cannot initialize buy-in=${toDollars(val)}. Should be 1 <= val <= ${toDollars(MAX_BUYIN_IN_CENTS)}.`);
             return false;
         }
         this.buyIn = val;
@@ -79,7 +82,7 @@ class PokerGame {
      */
     setSmallBlind(val) {
         if (val <= 0) {
-            console.error(`Cannot initialize SB with value of ${val}. Value needs to be > 0.`);
+            console.error(`Cannot initialize SB with value of ${toDollars(val)}. Value needs to be > 0.`);
             return false;
         }
         if (this.buyIn === -1) {
@@ -131,17 +134,13 @@ class PokerGame {
         this.dealerIdx = idx;
     }
 
-    isPositionAvailable(pos) {
-        return this.players[pos] === undefined;
-    }
-
     /**
      * Adds a player to a position, i.e. players array index
      * @param player that will be added
      * @param pos array index where player will be attempted to be placed
      */
     addPlayerToPosition(player, pos) {
-        if (!this.isPositionAvailable(pos)) {
+        if (this.players[pos] !== undefined) {
             throw new Error(`Cannot add player. Player already sitting at position ${pos}.`);
         }
         if (this.totalPlayers === MAX_PLAYERS_PER_GAME) {
@@ -186,7 +185,7 @@ class PokerGame {
     }
 
     /**
-     * Increment turn to the next player still in the game. Return an array of skipped players.
+     * Increment turn to the next player still in the game.
      * @returns array of players who were skipped either bcz they were out of the game or all-in
      */
     incrementTurnToNextPlayerInGame() {
@@ -230,6 +229,7 @@ class PokerGame {
         this.previousBet = 0;
         this.currentPlayer.raise(this.smallBlind);
         this.currentPlayer.actionState = 'SB';
+        this.smallBlindIdx = this.currentPlayer.id;
         this.incrementTurnToNextPlayerInGame();
 
         // post big blind; vars are set to 0 to allow a raise (so that later bb can check at the end of pre-flop)
@@ -237,6 +237,7 @@ class PokerGame {
         this.previousBet = 0;
         this.currentPlayer.raise(this.bigBlind);
         this.currentPlayer.actionState = 'BB';
+        this.bigBlindIdx = this.currentPlayer.id;
         this.incrementTurnToNextPlayerInGame();
         this.minRaise = this.bigBlind;
         this.previousBet = this.bigBlind;
@@ -246,6 +247,9 @@ class PokerGame {
     callCurrentPlayerAction(result) {
         switch (result.playerAction) {
             case 'all-in':
+                if (!this.currentPlayer.inGame) {
+                    throw new Error(`Current player (id: ${this.currentPlayer.id}) cannot fold bcz player not in game.`);
+                }
                 this.currentPlayer.allIn();
                 break;
             case 'call':
@@ -264,6 +268,9 @@ class PokerGame {
                 this.currentPlayer.raise(result.raiseAmount);
                 break;
             case 'fold':
+                if (!this.currentPlayer.inGame) {
+                    throw new Error(`Current player (id: ${this.currentPlayer.id}) cannot fold bcz player not in game.`);
+                }
                 this.currentPlayer.fold();
                 break;
             case 'check':
@@ -272,6 +279,8 @@ class PokerGame {
                 }
                 this.currentPlayer.check();
                 break;
+            default:
+                throw new Error(`Illegal argument: result=${JSON.stringify(result)}`);
         }
     }
 
@@ -355,23 +364,22 @@ class PokerGame {
         return this.players.filter((player) => player.isAllIn);
     }
 
-    /**
-     * @returns true if
-     *   - Everyone is all-in, OR
-     *   - Everyone except one person is all-in. That person should be in every Pot's potentialWinners Set
-     */
-    actionRoundEndedViaAllInScenario() {
-        this.throwIfNotInitialized();
-        if (this.allInPlayersCounter === this.numPlayersInGame) {
-            return true;
+    organizePotsAfterRoundEnded() {
+        if (!this.dealerRoundEnded() && !this.actionRoundEndedViaAllInScenario() && !this.actionRoundEnded()) {
+            throw new Error(`Round has not ended. Cannot organize pots.`);
         }
 
-        if (this.allInPlayersCounter === this.numPlayersInGame - 1) {
-            let player = this.players.find(player => player.inGame && !player.isAllIn);
-            return this.pots.every((pot) => pot.playerIdxInPotentialWinners(player.id));
-        }
-
-        return false;
+        this.pots
+            .filter((pot) => pot.open)
+            .forEach((pot) => {
+                if (pot.hasAllInPlayer()) {
+                    pot.open = false;
+                }
+                pot.prevARsAmount += pot.currARAmount;
+                pot.currARAmount = 0;
+                pot.playerCommitment = 0;
+                pot.history = new Map();
+            });
     }
 
     /**
@@ -398,33 +406,80 @@ class PokerGame {
 
     get noRaiseScenarioCounter() {
         let counter = 0;
-        this.players.forEach((player) => {
+        this.players
+            .filter((player) => player.inGame)
             // handles both pre-flop and post-flop "no raise" situations
-            if (player.actionState === 'call' || player.actionState === 'fold'
-                || player.actionState === 'check' || player.actionState === '') {
-                counter++;
-            }
-        });
+            .forEach((player) => {
+                // if player is all-in, AND,
+                //   - if player's actionState is 'call' => player has definitely not raised
+                //   - if player doesn't have an actionState, it means they're in this round from having gone all in
+                //     from a previous action round
+                // if the above is met, the player hasn't raised => count them in the no-raise scenario count
+                if (player.isAllIn && (player.actionState === 'call' || player.actionState === ' ')) {
+                    counter++
+                // if player has called AND they're NOT all-in, make sure they're in all open pots
+                //   - if they aren't, that means they still have room to call, and haven't called the current raise yet
+                //   - if they have called every open pot, count them in the no-raise scenario count
+                } else if (player.actionState === 'call' && !player.isAllIn) {
+                    if (this.pots.filter((pot) => pot.open).every((pot) => pot.hasPlayerInPotentialWinners(player.id))) {
+                        counter++;
+                    }
+                // if player is in check actionState, make sure everyone else inGame has checked to add a no-raise scenario count
+                } else if (player.actionState === 'check') {
+                    if (this.players.filter((player) => player.inGame).every((player) => player.actionState === 'check')) {
+                        counter++;
+                    }
+                }
+            });
         return counter;
     }
 
     get raiseScenarioCounter() {
-        let C = 0;
-        this.players.forEach((player) => {
-            // handles "raise" situations
-            if (player.actionState === 'call' || player.actionState === 'fold' || player.actionState === '') {
-                C++; // <-- Had you ever seen C++ in code? I actually hadn't until now.
-            }
-        });
-        return C;
+        return this.players.filter((player) => player.inGame)
+            .reduce((acc, player) => player.actionState === 'raise' ? acc + 1 : acc, 0);
     }
 
-    // Returns true if:
-    //  - no one has raised and everyone has played (i.e. called, folded, checked or are out of game) OR
-    //  - only currentPlayer has raised AND everyone else that's in the game has either folded or checked
+    preFlopActionRoundEnded() {
+        return this.actionRoundStr === 'pre-flop' && (
+                // if SB === BB, all players that aren't the SB or BB should have called, AND SB should have checked and BB should have checked
+                (this.smallBlind === this.bigBlind && this.players.filter((player) => player.inGame && player.id !== this.bigBlindIdx && player.id !== this.smallBlindIdx).every((player) => player.actionState === 'call') && this.players[this.smallBlindIdx].actionState === 'check' && this.players[this.bigBlindIdx].actionState === 'check')
+                // if SB !== BB, all players that aren't BB should have called, and BB should have checked
+            ||  (this.smallBlind !== this.bigBlind && this.players.filter((player) => player.inGame && player.id !== this.bigBlindIdx).every((player) => player.actionState === 'call') && this.players[this.bigBlindIdx].actionState === 'check')
+        );
+    }
+
+    /**
+     * @returns true if:
+     *  - certain pre-flop conditions are met
+     *  - no one has raised and everyone has played (i.e. called, checked or were already all-in) OR
+     *  - only currentPlayer has raised AND everyone else that's in the game has either folded or checked or was already all-in
+    */
     actionRoundEnded() {
-        return this.noRaiseScenarioCounter === this.totalPlayers
-            || (this.raiseScenarioCounter === this.totalPlayers - 1 && this.currentPlayer.actionState === 'raise');
+        return this.preFlopActionRoundEnded()
+            // if no one raised
+            || this.noRaiseScenarioCounter === this.numPlayersInGame
+            // OR someone raised
+            || (this.raiseScenarioCounter === 1 && this.currentPlayer.actionState === 'raise');
+            // TODO: Raise all-in, then subsequent raise isn't probably considered here.
+    }
+
+    /**
+     * @returns true if
+     *   - everyone is all-in, OR
+     *   - everyone except one player is all-in; that player should be in every Pot's potentialWinners Set
+     */
+    actionRoundEndedViaAllInScenario() {
+        this.throwIfNotInitialized();
+        if (this.allInPlayersCounter === this.numPlayersInGame) {
+            return true;
+        }
+
+        if (this.allInPlayersCounter === this.numPlayersInGame - 1) {
+            let player = this.players.find(player => player.inGame && !player.isAllIn);
+            return this.pots.every((pot) => pot.playerIdxInPotentialWinners(player.id));
+        }
+
+        return false;
     }
 
     /**
@@ -441,12 +496,10 @@ class PokerGame {
         }
 
         // can be combined later
-        // no-raise scenario
-        if (this.noRaiseScenarioCounter === this.totalPlayers) {
+        if (this.preFlopActionRoundEnded() || this.noRaiseScenarioCounter === this.numPlayersInGame) {
             return { scenario: 'no-raise' }; // free cards smh cod clam it
         }
 
-        // raise scenario
         return { scenario: 'raise' }; // no free cards baby!
     }
 
@@ -479,19 +532,16 @@ class PokerGame {
             throw new Error(`Dealer round hasn't ended.`);
         }
 
-        let winnerIdx;
-
-        // if everyone has folded in current action round or is out from previous action round
-        this.players.forEach((player, idx) => {
-            if (player.actionState === 'fold' || player.actionState === '') { /* do nothing */ }
-            else { winnerIdx = idx; }
-        });
+        if (this.pots.length > 1) {
+            console.warn(`Somehow, there are ${this.pots.length} pots. Is this OK?`);
+        }
 
         // move pot to winner's stack. there should only be one pot because everyone folded except one person
-        let winnings = this.pots[0].amount;
-        this.players[winnerIdx].stack += winnings;
+        let winner = this.players.find((player) => player.inGame);
+        let winnings = this.pots.reduce((acc, pot) => acc + pot.prevARsAmount, 0);
+        winner.stack += winnings;
         this.resetPots();
-        return { winnerIdx, winnings };
+        return { winnerIdx: winner.id, winnings };
     }
 
     resetPots() {
@@ -517,7 +567,7 @@ class PokerGame {
         this.minRaise = this.bigBlind;
         this.allowCheck = true;
 
-        // action rounds begins with the small blind
+        // action rounds begin with the first player in the game AFTER the dealerIdx
         this.turnIdx = this.dealerIdx;
         const skipped = this.incrementTurnToNextPlayerInGame();
 
@@ -531,12 +581,12 @@ class PokerGame {
         });
         
         this.actionRound++;
-        return skipped; // TODO(anyone): Move the previus 13 lines around to make sequential sense?
+        return skipped;
     }
 
     /**
      * Restart the following dealer round.
-     * @returns { gameEnded: boolean } - whether game ended if there's only 1 person left that won all the $
+     * @returns { gameEnded: boolean = whether game ended if there's only 1 person left that won all the $ }
      */
     refreshDealerRound() {
         this.throwIfNotInitialized();
@@ -556,7 +606,6 @@ class PokerGame {
             // If a player lost their money, they stay out. Can clear them out completely later.
             // Doesn't really matter though because browser version will have option to buy back in, leave, etc.
 
-            // DOUBLE CHECK THIS when showdown and side-pot parts are developed
             if (player.stack === 0 || player.stack < this.bigBlind) {
                 player.inGame = false;
             }
@@ -580,6 +629,15 @@ class PokerGame {
                 break;
             }
         }
+
+        // Commented out the below to push to GitHub without this assertion
+        // // TODO: Remove once confirmed works and add as test
+        // let TOTAL_MONEY_IN_GAME = toCents(3100);
+        // let actualTotalMoney = this.players.reduce((acc, player) => acc + player.stack, 0);
+        // if (TOTAL_MONEY_IN_GAME !== actualTotalMoney) {
+        //     throw new Error(`Clammit. We lost money somewhere: TOTAL_MONEY_IN_GAME=${toDollars(TOTAL_MONEY_IN_GAME)}, `
+        //         + `but actualTotalMoney=${actualTotalMoney}.`);
+        // }
 
         // set turn to dealer, increment turn to next player in game, and post blinds
         this.turnIdx = this.dealerIdx;
@@ -608,6 +666,9 @@ class PokerGame {
     getShowdownInfoAndAssignWinnings() {
         this.validateInActionRound('river');
 
+        // TODO: Check if the last pot has only one player and assign to the player before making it a pot to check hands for
+        if (this.actionRoundEndedViaAllInScenario()) { /* TODO implementation of the above in here */}
+
         // for each player in game, get their bestHandRank and assign to player.showdownRank
         this.players.forEach((player, idx) => {
             if (player.inGame) {
@@ -634,7 +695,7 @@ class PokerGame {
         // as you're doing the above, build up the result array that will be returned
         this.pots.forEach((pot) => {
             // add pot / numWinners to every winner, reset pot
-            let winnings = pot.amount / pot.winHandRanks.length;
+            let winnings = pot.prevARsAmount / pot.winHandRanks.length;
             let resultObj = { winnings, winners: [] };
             result.push(resultObj);
 
@@ -661,7 +722,7 @@ class PokerGame {
         let raiseCounter = 0;
         for (let i = 0; i < this.totalPlayers; i++) {
             // this allows the small blind to call big blind as well
-            if (this.players[i].actionState === 'raise' || (this.players[i].actionState === 'SB')) {
+            if (this.players[i].actionState === 'raise' || this.players[i].actionState === 'SB') {
                 raiseCounter++;
             }
         }
@@ -728,7 +789,9 @@ class PokerGame {
         `  initialized: ${this.initialized},\n` +
         `  buyIn: ${toDollars(this.buyIn)},\n` +
         `  smallBlind: $${toDollars(this.smallBlind)},\n` +
+        `  smallBlindIdx: ${this.smallBlindIdx},\n` +
         `  bigBlind: $${toDollars(this.bigBlind)},\n` +
+        `  bigBlindIdx: ${this.bigBlindIdx},\n` +
         `  dealerIdx: ${this.dealerIdx},\n` +
         `  turnIdx: ${this.turnIdx},\n` +
         `  pot: ${this.pots.map((pot, idx) => {

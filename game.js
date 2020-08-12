@@ -163,7 +163,7 @@ const handleCommandLineInput = (input) => {
 
             // set each player's stack to the buy-in
             PG.players.forEach((player) => player.stack = PG.buyIn);
-
+            // PG.players[0].stack = 10000; // TODO: Remove this
             // iterate state and ask next question
             pregame++;
             console.log('What will the small blind be?');
@@ -212,6 +212,7 @@ const handleCommandLineInput = (input) => {
             // Pick random player to begin as the first dealer. Actually, dealer will be randDealer + 1 below because
             // PG.refreshDealerRound() will make dealer be the next. Doesn't matter though cause game hasn't yet started.
             let randDealer = Math.floor(Math.random() * PG.totalPlayers);
+            // randDealer = 3; // TODO: Remove this
             PG.setDealer(randDealer);
 
             PG.refreshDealerRound();
@@ -252,6 +253,8 @@ const handleCommandLineInput = (input) => {
             // Checking if dealer round is done before action round because of edge case where one player checks
             // and all others fold.
             if (PG.dealerRoundEnded()) {
+                PG.organizePotsAfterRoundEnded();
+
                 let drInfo = PG.getDealerRoundInfoAndAssignWinnings();
                 console.log(`\nPlayer ${PG.players[drInfo.winnerIdx].id} wins $${toDollars(drInfo.winnings)}`);
 
@@ -263,6 +266,7 @@ const handleCommandLineInput = (input) => {
                 logDealer(PG.dealer)
 
             } else if (PG.actionRoundEndedViaAllInScenario()) {
+                PG.organizePotsAfterRoundEnded();
 
                 console.log(`all action rounds ended via an all-in scenario`);
                 PG.finishActionRounds();
@@ -285,6 +289,8 @@ const handleCommandLineInput = (input) => {
                 logDealer(PG.dealer)
 
             } else if (PG.actionRoundEnded()) {
+                PG.organizePotsAfterRoundEnded();
+
                 let arInfo = PG.getActionRoundInfo();
                 console.log(`action round ended via ${arInfo.scenario} scenario`);
                 
@@ -310,6 +316,8 @@ const handleCommandLineInput = (input) => {
             logSkipped(skippedPlayers);
 
             if (PG.dealerRoundEnded()) {
+                PG.organizePotsAfterRoundEnded();
+
                 let drInfo = PG.getDealerRoundInfoAndAssignWinnings();
                 console.log(`\nPlayer ${PG.players[drInfo.winnerIdx].id} wins $${toDollars(drInfo.winnings)}`);
 
@@ -318,6 +326,7 @@ const handleCommandLineInput = (input) => {
                 logDealer(PG.dealer)
 
             } else if (PG.actionRoundEndedViaAllInScenario() || PG.actionRoundEnded()) {
+                PG.organizePotsAfterRoundEnded();
                 let sdInfo = PG.getShowdownInfoAndAssignWinnings();
 
                 // output winner(s) and winning hand(s)
@@ -326,7 +335,7 @@ const handleCommandLineInput = (input) => {
                     // state the winner, how much they won, and with what hand
                     winners.forEach((winnerIdx) => {
                         let winnerPlayer = PG.players[winnerIdx];
-                        console.log(`Player ${winnerPlayer.id} won ${winnings} with a ` +
+                        console.log(`Player ${winnerPlayer.id} won ${toDollars(winnings)} with a ` +
                             `${rankToHandStr(winnerPlayer.showdownRank[0])}`);
                     });
                 });
