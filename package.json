@@ -1,0 +1,13 @@
+{
+  "name": "poker-birds",
+  "author": "Alex Klyuev",
+  "license": "MIT",
+  "scripts": {
+    "start": "nodemon server",
+    "react-dev": "webpack -w",
+    "build": "webpack"
+  },
+  "dependencies": {
+
+  }
+}
