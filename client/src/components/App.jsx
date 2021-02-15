@@ -5,6 +5,7 @@
 import React from 'react';
 import StartUpForm from './StartUpForm';
 import PlayerContainer from './PlayerContainer';
+import TableContainer from './TableContainer';
 
 // GF is short for game functions
 import GF from '../gameLogic/gameFunctions';
@@ -15,7 +16,7 @@ class App extends React.Component {
 
     // GAME STATE is managed here
     this.state = {
-      gameUnderway: false,
+      gameUnderway: true,
       numPlayers: 0,
       buyIn: 0,
       smallBlind: 0,
@@ -84,6 +85,7 @@ class App extends React.Component {
     return (
       <div>
         <div>Game View</div>
+        <TableContainer />
         <PlayerContainer numPlayers={numPlayers} />
       </div>
     );

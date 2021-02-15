@@ -7,7 +7,6 @@ const Container = styled.div`
   height: 200px;
 `;
 
-
 class Player extends React.Component {
   constructor(props) {
     super(props);
@@ -23,5 +22,9 @@ class Player extends React.Component {
     );
   }
 }
+
+Player.propTypes = {
+  id: PropTypes.number.isRequired,
+};
 
 export default Player;
