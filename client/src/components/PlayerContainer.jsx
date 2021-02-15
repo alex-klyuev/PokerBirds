@@ -13,12 +13,24 @@ const Container = styled.div`
   box-sizing: border-box;
 `;
 
-const PlayerContainer = (props) => (
-  <Container>
-    <Player />
-    <Player />
-    <Player />
-  </Container>
-);
+const PlayerContainer = (props) => {
+  const { numPlayers } = props;
+  const playerIds = [];
+
+  // ID's will be one-indexed to match how players think of the game
+  for (let i = 1; i <= numPlayers; i += 1) {
+    playerIds.push(i);
+  }
+
+  return (
+    <Container>
+      {playerIds.map((id) => <Player key={id} id={id} />)}
+    </Container>
+  );
+};
+
+PlayerContainer.propTypes = {
+  numPlayers: PropTypes.number.isRequired,
+};
 
 export default PlayerContainer;

@@ -125,9 +125,9 @@ class StartUpForm extends React.Component {
       smallBlind: GF.convertToDollars(smallBlind),
       bigBlind: GF.convertToDollars(bigBlind),
     };
-    // kind of janky...handles all 4 values' uninitialized conditions
-    // numPlayers at 0, buyIn, smallBlind, and bigBlind at -1
-    if (inputs[field] <= 0) {
+
+    // show nothing if field is not initialized yet; otherwise show their choice
+    if (inputs[field] === 0) {
       return null;
     }
     return (

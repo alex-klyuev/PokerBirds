@@ -4,7 +4,6 @@
 
 import React from 'react';
 import StartUpForm from './StartUpForm';
-import Player from '../gameLogic/Player';
 import PlayerContainer from './PlayerContainer';
 
 // GF is short for game functions
@@ -16,11 +15,11 @@ class App extends React.Component {
 
     // GAME STATE is managed here
     this.state = {
-      gameUnderway: true,
-      playerObjectArray: [],
-      buyIn: -1,
-      smallBlind: -1,
-      bigBlind: -1,
+      gameUnderway: false,
+      numPlayers: 0,
+      buyIn: 0,
+      smallBlind: 0,
+      bigBlind: 0,
       dealer: 0,
       turn: 0,
       pot: 0,
@@ -47,13 +46,8 @@ class App extends React.Component {
   }
 
   registerNumPlayers(numPlayers) {
-    // create player object array
-    const playerObjectArray = [];
-    for (let i = 0; i < numPlayers; i += 1) {
-      playerObjectArray.push(new Player(i + 1));
-    }
     this.setState({
-      playerObjectArray,
+      numPlayers: Number(numPlayers),
     });
   }
 
@@ -62,19 +56,19 @@ class App extends React.Component {
   // this allows players to play with cents without having to deal with decimals in the code
   registerBuyIn(buyIn) {
     this.setState({
-      buyIn: GF.convertToCents(buyIn),
+      buyIn: GF.convertToCents(Number(buyIn)),
     });
   }
 
   registerSmallBlind(smallBlind) {
     this.setState({
-      smallBlind: GF.convertToCents(smallBlind),
+      smallBlind: GF.convertToCents(Number(smallBlind)),
     });
   }
 
   registerBigBlind(bigBlind) {
     this.setState({
-      bigBlind: GF.convertToCents(bigBlind),
+      bigBlind: GF.convertToCents(Number(bigBlind)),
     });
   }
 
@@ -85,18 +79,19 @@ class App extends React.Component {
   }
 
   renderGameView() {
+    const { numPlayers } = this.state;
 
     return (
       <div>
         <div>Game View</div>
-        <PlayerContainer />
+        <PlayerContainer numPlayers={numPlayers} />
       </div>
     );
   }
 
   renderStartUpView() {
     const {
-      playerObjectArray,
+      numPlayers,
       buyIn,
       smallBlind,
       bigBlind,
@@ -111,7 +106,7 @@ class App extends React.Component {
           registerSmallBlind={this.registerSmallBlind}
           registerBigBlind={this.registerBigBlind}
           startGame={this.startGame}
-          numPlayers={playerObjectArray.length}
+          numPlayers={numPlayers}
           buyIn={buyIn}
           smallBlind={smallBlind}
           bigBlind={bigBlind}
