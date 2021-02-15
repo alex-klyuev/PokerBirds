@@ -209,7 +209,7 @@ const handleCommandLineInput = (input) => {
       console.error('Please enter a valid input.');
       return;
     }
-    if (PG.smallBlind > PG.bigBlind || PG.bigBlind % PG.smallBlind != 0) {
+    if (PG.smallBlind > PG.bigBlind || PG.bigBlind % PG.smallBlind !== 0) {
       console.error('Please enter a valid input.');
       return;
     }

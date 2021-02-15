@@ -4,26 +4,28 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
+// GF is short for game functions
+import GF from '../gameLogic/gameFunctions';
+
 class StartUpForm extends React.Component {
-  // validation functions
+  // validation functions that don't require reference to instance
   static validateNumPlayers(input) {
-    if (input.length > 1 || input === '') {
-      alert('Please enter a valid input');
-      return false;
-    }
-    const numPlayers = parseInt(input, 10);
-    if (numPlayers < 2 || numPlayers > 8 || Number.isNaN(numPlayers)) {
+    const numPlayers = Number(input);
+    if (Number.isNaN(numPlayers) || !Number.isInteger(numPlayers) || numPlayers < 2 || numPlayers > 8) {
       alert('Please enter a valid input');
       return false;
     }
     return true;
   }
 
-  static validateBuyIn(input) {}
-
-  static validateSmallBlind(input) {}
-
-  static validateBigBlind(input) {}
+  static validateBuyIn(input) {
+    const buyIn = Number(input);
+    if (Number.isNaN(buyIn) || !Number.isInteger(buyIn) || buyIn < 1 || buyIn > 999) {
+      alert('Please enter a valid input');
+      return false;
+    }
+    return true;
+  }
 
   constructor(props) {
     super(props);
@@ -36,6 +38,8 @@ class StartUpForm extends React.Component {
     };
 
     this.handleInputChange = this.handleInputChange.bind(this);
+    this.validateSmallBlind = this.validateSmallBlind.bind(this);
+    this.validateBigBlind = this.validateBigBlind.bind(this);
   }
 
   handleInputChange(e) {
@@ -43,6 +47,22 @@ class StartUpForm extends React.Component {
       [e.target.name]: e.target.value,
     });
   }
+
+  // validation functions that do require reference to instance
+  validateSmallBlind(input) {
+    const { buyInFilled, buyIn } = this.props;
+    if (!buyInFilled) {
+      alert('Please enter a buy-in first');
+      return false;
+    }
+    const smallBlind = GF.convertToCents(Number(input));
+    if (Number.isNaN(smallBlind) || !Number.isInteger(smallBlind) || smallBlind < 1 || smallBlind > buyIn / 20) {
+      return false;
+    }
+    return true;
+  }
+
+  validateBigBlind(input) { }
 
   render() {
     const {
@@ -109,7 +129,7 @@ class StartUpForm extends React.Component {
         </form>
         <h4>Small blind:</h4>
         <form onSubmit={(e) => {
-          if (!StartUpForm.validateSmallBlind(smallBlind)) {
+          if (!this.validateSmallBlind(smallBlind)) {
             return;
           }
           registerSmallBlind(smallBlind);
@@ -120,7 +140,7 @@ class StartUpForm extends React.Component {
           <button
             type="button"
             onClick={() => {
-              if (!StartUpForm.validateSmallBlind(smallBlind)) {
+              if (!this.validateSmallBlind(smallBlind)) {
                 return;
               }
               registerSmallBlind(smallBlind);
@@ -131,7 +151,7 @@ class StartUpForm extends React.Component {
         </form>
         <h4>Big blind:</h4>
         <form onSubmit={(e) => {
-          if (!StartUpForm.validateBigBlind(bigBlind)) {
+          if (!this.validateBigBlind(bigBlind)) {
             return;
           }
           registerBigBlind(bigBlind);
@@ -142,7 +162,7 @@ class StartUpForm extends React.Component {
           <button
             type="button"
             onClick={() => {
-              if (!StartUpForm.validateBigBlind(bigBlind)) {
+              if (!this.validateBigBlind(bigBlind)) {
                 return;
               }
               registerBigBlind(bigBlind);
@@ -154,6 +174,7 @@ class StartUpForm extends React.Component {
         <div>Game Rules:</div>
         <div>Blinds and bets can be in increments of cents, but be sure to input them as decimals.</div>
         <div>The small blind will be the smallest chip size, so the big blind and all bets must be multiples of that.</div>
+        <button type="button">Play</button>
       </div>
     );
   }
@@ -164,6 +185,11 @@ StartUpForm.propTypes = {
   registerBuyIn: PropTypes.func.isRequired,
   registerSmallBlind: PropTypes.func.isRequired,
   registerBigBlind: PropTypes.func.isRequired,
+  numPlayersFilled: PropTypes.bool.isRequired,
+  buyInFilled: PropTypes.bool.isRequired,
+  smallBlindFilled: PropTypes.bool.isRequired,
+  bigBlindFilled: PropTypes.bool.isRequired,
+  buyIn: PropTypes.number.isRequired,
 };
 
 export default StartUpForm;
