@@ -47,6 +47,9 @@ class App extends React.Component {
     });
   }
 
+  // the state manages the dollar values as cents
+  // (e.g. $20 is saved as 2000)
+  // this allows players to play with cents without having to deal with decimals in the code
   registerBuyIn(buyIn) {
     this.setState({
       buyIn: GF.convertToCents(buyIn),
@@ -55,13 +58,13 @@ class App extends React.Component {
 
   registerSmallBlind(smallBlind) {
     this.setState({
-      smallBlind,
+      smallBlind: GF.convertToCents(smallBlind),
     });
   }
 
   registerBigBlind(bigBlind) {
     this.setState({
-      bigBlind,
+      bigBlind: GF.convertToCents(bigBlind),
     });
   }
 
@@ -73,12 +76,6 @@ class App extends React.Component {
       bigBlind,
     } = this.state;
 
-    // pass down to form in order to assist input validation
-    const numPlayersFilled = playerObjectArray.length !== 0;
-    const buyInFilled = buyIn !== -1;
-    const smallBlindFilled = smallBlind !== -1;
-    const bigBlindFilled = bigBlind !== -1;
-
     return (
       <div>
         <div>Welcome to PokerBirds! 🐦</div>
@@ -87,11 +84,10 @@ class App extends React.Component {
           registerBuyIn={this.registerBuyIn}
           registerSmallBlind={this.registerSmallBlind}
           registerBigBlind={this.registerBigBlind}
-          numPlayersFilled={numPlayersFilled}
-          buyInFilled={buyInFilled}
-          smallBlindFilled={smallBlindFilled}
-          bigBlindFilled={bigBlindFilled}
+          numPlayers={playerObjectArray.length}
           buyIn={buyIn}
+          smallBlind={smallBlind}
+          bigBlind={bigBlind}
         />
       </div>
     );
