@@ -141,6 +141,7 @@ class StartUpForm extends React.Component {
       registerBuyIn,
       registerSmallBlind,
       registerBigBlind,
+      startGame,
     } = this.props;
 
     const {
@@ -279,7 +280,7 @@ class StartUpForm extends React.Component {
             if (!this.validateAll()) {
               return;
             }
-            alert('Game begins!');
+            startGame();
           }}
         >
           Play!
@@ -294,6 +295,7 @@ StartUpForm.propTypes = {
   registerBuyIn: PropTypes.func.isRequired,
   registerSmallBlind: PropTypes.func.isRequired,
   registerBigBlind: PropTypes.func.isRequired,
+  startGame: PropTypes.func.isRequired,
   numPlayers: PropTypes.number.isRequired,
   buyIn: PropTypes.number.isRequired,
   smallBlind: PropTypes.number.isRequired,
