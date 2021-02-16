@@ -5,8 +5,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
-
-// GF is short for game functions
 import GF from '../gameLogic/gameFunctions';
 
 const Input = styled.span`

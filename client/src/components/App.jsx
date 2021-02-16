@@ -1,15 +1,18 @@
 /* eslint-disable no-param-reassign */
+
+// TO-DO: Remove these later
 /* eslint-disable class-methods-use-this */
-// REMOVE THIS LATER:
 /* eslint-disable react/no-unused-state */
-// no styling for now...let's get the game functionality working
+
+// --- ACRONYMS ---
+// PG = poker game -> replacement for the state for use within functions
+// GF = game functions
 
 import React from 'react';
 import StartUpForm from './StartUpForm';
 import PlayerContainer from './PlayerContainer';
 import TableContainer from './TableContainer';
 import MessageBox from './MessageBox';
-// GF = game functions
 import GF from '../gameLogic/gameFunctions';
 import Player from '../gameLogic/Player';
 
@@ -124,6 +127,9 @@ class App extends React.Component {
     PG.dealer = Math.floor(Math.random() * PG.playerObjectArray.length);
     PG.gameUnderway = true;
 
+    // pick a color for the game
+    PG.deckColor = Math.floor(Math.random() * 2) ? 'Blue' : 'Red';
+
     // after updating state, start the dealer round
     this.setState(PG, this.startDealerRound);
   }
@@ -142,13 +148,6 @@ class App extends React.Component {
     // post blinds
     GF.postBlinds(PG);
 
-    // set up game:
-    // player whose turn it is should see cards
-    // all other players should have flipped cards
-    // Pot should be initialized
-    // GF.outputGameStatus(PG);
-    PG.deckColor = Math.floor(Math.random() * 2) ? 'Blue' : 'Red';
-
     // TO-DO: Modify to be more dynamic with the UI
     // (focus that player somehow, gray out the others, etc.)
     PG.message = `Player ${PG.dealer + 1} is the dealer\nPlayer ${PG.turn + 1}, it's your turn`;
@@ -159,9 +158,7 @@ class App extends React.Component {
       PG.allowCheck = true;
     }
 
-    this.setState(PG, () => {
-      console.log(this.state);
-    });
+    this.setState(PG);
   }
 
   // --- RENDER VIEW FUNCTIONS ---

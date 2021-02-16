@@ -1,7 +1,8 @@
+// TO-DO: refactor min bet to be part of the message box
+
 import React from 'react';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
-// GF = game functions
 import GF from '../../gameLogic/gameFunctions';
 
 const Container = styled.div`
@@ -37,19 +38,29 @@ const Player = (props) => {
   // 3 card view options: player is out of the game,
   // player is in but not their turn, or it's player's turn
   let cardView;
+  let minBetView = <Text />;
   if (!player.inGame) {
     cardView = <CardBox />;
-  } else if (player.ID === turn + 1) {
+  } else if (player.ID === turn + 1 && player.cards[0].length !== 0) {
+    // the && above is a janky way of handling game initialization
     cardView = (
       <CardBox>
         <CardContainer>
-          <img alt="" className="card" src={`lib/cards/${deckColor}_Back.svg`} />
+          <img alt="" className="card" src={`lib/cards/${GF.beautifyCard(player.cards[0])}.svg`} />
         </CardContainer>
         <CardContainer>
-          <img alt="" className="card" src={`lib/cards/${deckColor}_Back.svg`} />
+          <img alt="" className="card" src={`lib/cards/${GF.beautifyCard(player.cards[1])}.svg`} />
         </CardContainer>
       </CardBox>
-    );;
+    );
+
+    // TO-DO: refactor min bet to be part of the message box
+    minBetView = (
+      <Text>
+        Min bet: $
+        {GF.convertToDollars(minBet)}
+      </Text>
+    );
   } else {
     cardView = (
       <CardBox>
@@ -62,6 +73,13 @@ const Player = (props) => {
       </CardBox>
     );
   }
+
+  const potCommitmentView = (player.potCommitment === 0) ? <Text /> : (
+    <Text>
+      $
+      {GF.convertToDollars(player.potCommitment)}
+    </Text>
+  );
 
   return (
     <Container>
@@ -78,14 +96,8 @@ const Player = (props) => {
       <Text>
         {player.actionState}
       </Text>
-      <Text>
-        $
-        {GF.convertToDollars(player.potCommitment)}
-      </Text>
-      <Text>
-        Min bet: $
-        {GF.convertToDollars(minBet)}
-      </Text>
+      {potCommitmentView}
+      {minBetView}
     </Container>
   );
 };

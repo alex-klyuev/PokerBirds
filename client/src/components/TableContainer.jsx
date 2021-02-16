@@ -20,7 +20,7 @@ const TableContainer = (props) => {
     <Container>
       <div>
         <Board PG={PG} />
-        <Pot />
+        <Pot pot={PG.pot} />
       </div>
     </Container>
   );

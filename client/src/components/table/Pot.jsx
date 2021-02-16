@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
+import GF from '../../gameLogic/gameFunctions';
 
 const OuterContainer = styled.div`
   margin-top: 30px;
@@ -22,21 +23,20 @@ const Text = styled.h4`
   text-align: center;
 `;
 
-const Pot = (props) => (
-  <OuterContainer>
-    <div>
-      <PotContainer>
-        $150
-      </PotContainer>
-      <Text>
-        Pot
-      </Text>
-    </div>
-  </OuterContainer>
-);
+const Pot = (props) => {
+  const { pot } = props;
+  return (
+    <OuterContainer>
+      <div>
+        <PotContainer>{`$${GF.convertToDollars(pot)}`}</PotContainer>
+        <Text>Pot</Text>
+      </div>
+    </OuterContainer>
+  );
+};
 
 Pot.propTypes = {
-
+  pot: PropTypes.number.isRequired,
 };
 
 export default Pot;

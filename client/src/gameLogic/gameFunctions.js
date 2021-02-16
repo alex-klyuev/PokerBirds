@@ -338,10 +338,10 @@ const makeFreqMap = (hand) => {
 const buildDeck = (PG) => {
   PG.deckArray = [];
   for (let i = 0; i < 13; i++) {
-    const spadesCard = [i + 2, '♠'];
-    const clubsCard = [i + 2, '♣'];
-    const diamondCard = [i + 2, '♦'];
-    const heartCard = [i + 2, '♥'];
+    const spadesCard = [i + 2, 'S'];
+    const clubsCard = [i + 2, 'C'];
+    const diamondCard = [i + 2, 'D'];
+    const heartCard = [i + 2, 'H'];
     PG.deckArray.push(spadesCard, clubsCard, diamondCard, heartCard);
   }
 };
