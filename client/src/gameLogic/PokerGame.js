@@ -1,3 +1,7 @@
+// --- REACT APP NOTES ---
+//
+// This file is not used by the React app, but is left for reference
+
 class PokerGame {
   constructor() {
     // CONSTANT GLOBAL VARIABLES --- they'll remain the same for the entire game once initialized
