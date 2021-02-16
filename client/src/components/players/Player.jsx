@@ -1,6 +1,8 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
+// GF = game functions
+import GF from '../../gameLogic/gameFunctions';
 
 const Container = styled.div`
   width: 100px;
@@ -12,7 +14,7 @@ const Player = (props) => {
 
   return (
     <div>
-      <div>{player.stack}</div>
+      <div>{GF.convertToDollars(player.stack)}</div>
       <Container>Player</Container>
     </div>
   );

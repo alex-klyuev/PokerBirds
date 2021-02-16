@@ -1,3 +1,4 @@
+/* eslint-disable no-param-reassign */
 /* eslint-disable class-methods-use-this */
 // REMOVE THIS LATER:
 /* eslint-disable react/no-unused-state */
@@ -8,8 +9,7 @@ import StartUpForm from './StartUpForm';
 import PlayerContainer from './PlayerContainer';
 import TableContainer from './TableContainer';
 import MessageBox from './MessageBox';
-
-// GF is short for game functions
+// GF = game functions
 import GF from '../gameLogic/gameFunctions';
 import Player from '../gameLogic/Player';
 
@@ -19,8 +19,8 @@ class App extends React.Component {
 
     // GAME STATE is managed here
     this.state = {
-      gameUnderway: false,
       playerObjectArray: [{}],
+      gameUnderway: false,
       numPlayers: 0,
       buyIn: 0,
       // gameUnderway: true,
@@ -28,7 +28,7 @@ class App extends React.Component {
       // buyIn: 100,
       smallBlind: 0,
       bigBlind: 0,
-      dealerId: 0,
+      dealer: 0,
       turn: 0,
       pot: 0,
       // 0 = pre-flop, 1 = flop, 2 = turn, 3 = river
@@ -38,6 +38,7 @@ class App extends React.Component {
       minRaise: 0,
       previousBet: 0,
       allowCheck: false,
+      message: '',
     };
 
     this.registerNumPlayers = this.registerNumPlayers.bind(this);
@@ -56,32 +57,12 @@ class App extends React.Component {
 
   // --- PLAYER INTERFACE FUNCTIONS ---
 
-  /* handleRaise(bet, raiseAmount) {
-
-    const {
-      pot,
-      actionState,
-    }
-
-    PG.pot += raiseAmount;
-
-    this.actionState = 'raise';
-
-    // if the amount bet is greater than the previous bet and the minimum raise,
-    // update the minimum raise. this should always occur unless
-    // the player raises all-in without having enough to go above the minimum raise
-    if (bet > PG.previousBet + PG.minRaise) {
-      PG.minRaise = bet - PG.previousBet;
-    } // else {} should have code here to handle edge case 1 (see bottom notes)
-
-    this.potCommitment += raiseAmount;
-
-    // previous bet is updated. see bottom notes for edge case 2: second scenario assumed
-    PG.previousBet = this.potCommitment;
-
-    // once there's been a raise, no one else can check in that action round.
-    PG.allowCheck = false;
-  } */
+  handleRaise(ID, bet) {
+    bet = GF.convertToCents(bet);
+    const PG = this.state;
+    PG.playerObjectArray[ID - 1].raise(bet, PG);
+    this.setState(PG);
+  }
 
   // --- GAME STARTUP FUNCTIONS ---
 
@@ -100,13 +81,11 @@ class App extends React.Component {
   // (e.g. $20 is saved as 2000)
   // this allows players to play with cents without having to deal with decimals in the code
   registerBuyIn(buyIn) {
-    // eslint-disable-next-line no-param-reassign
     buyIn = GF.convertToCents(Number(buyIn));
 
     // assign the buy in to each player
     const { playerObjectArray } = this.state;
     playerObjectArray.forEach((player) => {
-      // eslint-disable-next-line no-param-reassign
       player.stack = buyIn;
     });
 
@@ -133,25 +112,55 @@ class App extends React.Component {
   startGame() {
     // pick random dealer
     const { numPlayers } = this.state;
-    const dealerId = Math.floor(Math.random() * numPlayers + 1);
+    const dealer = Math.floor(Math.random() * numPlayers + 1);
 
     // after updating state, start the dealer round
     this.setState({
-      dealerId,
+      dealer,
       gameUnderway: true,
     }, this.startDealerRound);
   }
 
   startDealerRound() {
     // Increment dealer
-    let { dealerId } = this.state;
-    dealerId += 1;
-    // Post blinds - need access to players
-    // Shuffle deck
-    // Assign cards
-    this.setState({
-      dealerId,
-    }, () => {
+    const PG = this.state;
+
+    // build a new full deck and deal cards to the players
+    GF.buildDeck(PG);
+    GF.dealCards(PG);
+
+    // set turn to small blind, next after dealer
+    PG.turn = PG.dealer;
+    GF.incrementTurn(PG);
+
+    // post blinds
+    GF.postBlinds(PG);
+
+    // set up game:
+    // player whose turn it is should see cards
+    // all other players should have flipped cards
+    // Pot should be initialized
+    // GF.outputGameStatus(PG);
+
+    // TO-DO: Modify to be more dynamic with the UI
+    // (focus that player somehow, gray out the others, etc.)
+    PG.message = `Player ${PG.dealer} is the dealer\nPlayer ${PG.turn}, it's your turn`;
+
+    // edge case scenario where there are only 2 players and sb = bb, first player to act is sb
+    // and this allows them to check
+    if (PG.playerObjectArray[PG.turn].actionState === 'SB' && PG.smallBlind === PG.bigBlind) {
+      PG.allowCheck = true;
+    }
+
+    this.setState(PG, () => {
+      console.log(this.state);
+    });
+  }
+
+  postBlinds() {
+    const PG = this.state;
+    GF.postBlinds(PG);
+    this.setState(PG, () => {
       console.log(this.state);
     });
   }
@@ -159,7 +168,7 @@ class App extends React.Component {
   // --- RENDER VIEW FUNCTIONS ---
 
   renderGameView() {
-    const { playerObjectArray } = this.state;
+    const { playerObjectArray, message } = this.state;
 
     return (
       <div>
@@ -168,7 +177,7 @@ class App extends React.Component {
           playerObjectArray={playerObjectArray}
           handleRaise={this.handleRaise}
         />
-        <MessageBox message="message box" />
+        <MessageBox message={message} />
       </div>
     );
   }
