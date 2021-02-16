@@ -87,6 +87,10 @@ class App extends React.Component {
         break;
     }
 
+    GF.incrementTurn(PG);
+    // function to find the next player that is still in the game
+    GF.findNextPlayer(PG);
+
     // in the spirit of modularity, this function will pass the modified PG on to the next handler,
     // which will in turn update the state
     this.handleActionRound(PG);
@@ -96,14 +100,6 @@ class App extends React.Component {
   handleActionRound(PG) {
     // handle the pre-flop
     if (PG.actionRoundState === 0) {
-      // TODO(anyone): merge incrementTurn into findNextPlayer
-      GF.incrementTurn(PG);
-      // function to find the next player that is still in the game
-      GF.findNextPlayer(PG);
-
-      // once turn is incremented, following code is what needs to be executed
-      // for the next player before next user input
-
       // pre-flop, the big blind (and the small blind if it's equal to big blind)
       // have the option to check if all other players called or folded.
       let preflopCounter = 0;
@@ -149,35 +145,56 @@ class App extends React.Component {
 
       // check if action round is done
       if (GF.checkActionRoundEndingCondition(PG)) {
-        // flop
+        // if so, add 3 cards to the board
         GF.flop(PG);
-        console.log('with flop: ', PG);
-
         // remaining code that is the same between each action round
         GF.refreshActionRound(PG);
-
         PG.actionRoundState += 1;
       }
     }
 
-    // handle the flop
-    if (PG.actionRoundState === 1) {
+    // handle the flop and turn (same functionality for each)
+    if (PG.actionRoundState === 1 || PG.actionRoundState === 2) {
+      if (GF.checkDealerRoundEndingCondition(PG)) {
+        GF.refreshDealerRound(PG);
+        PG.actionRoundState = 0;
+      }
 
-    }
-
-    // handle the turn
-    if (PG.actionRoundState === 0) {
-
+      if (GF.checkActionRoundEndingCondition(PG)) {
+        GF.addToBoard(PG); // turn & river
+        GF.refreshActionRound(PG);
+        PG.actionRoundState += 1;
+      }
     }
 
     // handle the river
-    if (PG.actionRoundState === 0) {
+    if (PG.actionRoundState === 3) {
+      if (GF.checkDealerRoundEndingCondition(PG)) {
+        GF.refreshDealerRound(PG);
+        PG.actionRoundState = 0;
+        return;
+      }
 
+      // the difference on the river is the opportunity for a showdown
+      if (GF.checkActionRoundEndingCondition(PG)) {
+        // set the winning hand rank and its player index
+        const winHandRank = GF.showdown(PG);
+
+        // give the player the pot and reset it to 0
+        PG.playerObjectArray[winHandRank.playerIndex].stack += PG.pot;
+        PG.pot = 0;
+
+        // state the winner and how they won
+        PG.message = `Player ${PG.playerObjectArray[winHandRank.playerIndex].ID}`;
+        PG.message += ` won with a ${GF.rankToHandStr(winHandRank[0])}`;
+
+        // reset the dealer round
+        GF.refreshDealerRound(PG);
+        PG.actionRoundState = 0;
+      }
     }
 
-    this.setState(PG, () => {
-      console.log('pre-flop ended: ', this.state);
-    });
+    this.setState(PG);
   }
 
   // --- GAME STARTUP FUNCTIONS ---

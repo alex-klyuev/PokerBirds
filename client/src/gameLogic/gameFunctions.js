@@ -66,7 +66,7 @@ const bestHandRank = (sevenCards) => {
   // iterate through each hand combination to return its rank, then push the
   // handRank array to handRanks
   const handRanks = [];
-  for (let i = 0; i < handCombinations.length; i++) {
+  for (let i = 0; i < handCombinations.length; i += 1) {
     const handRank = returnHandRank(handCombinations[i]);
     handRanks.push(handRank);
   }
@@ -107,7 +107,7 @@ const returnHandRank = (hand) => {
   hand.sort((card1, card2) => card2[0] - card1[0]);
 
   // iterate through the handFunctionsArray and return the hand
-  for (i = 0; i < handFunctionsArray.length; i++) {
+  for (let i = 0; i < handFunctionsArray.length; i += 1) {
     const handRank = handFunctionsArray[i](hand);
     if (handRank !== null) {
       return handRank;
@@ -117,7 +117,7 @@ const returnHandRank = (hand) => {
 
 const straightFlush = (hand) => {
   // check for flush; if not, function is broken immediately
-  for (let i = 1; i <= 4; i++) {
+  for (let i = 1; i <= 4; i += 1) {
     if (hand[i][1] !== hand[0][1]) {
       return null;
     }
@@ -126,9 +126,9 @@ const straightFlush = (hand) => {
   // check for wheel straight (A -> 5)
   let wheelCounter = 0;
   if (hand[0][0] === 14) {
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= 4; i += 1) {
       if (hand[i][0] === 6 - i) {
-        wheelCounter++;
+        wheelCounter += 1;
       }
     }
   }
@@ -678,7 +678,7 @@ const refreshDealerRound = (PG) => {
   postBlinds(PG);
 
   // declare the dealer, output the first game board, and announce the first turn
-  PG.message = `Player ${PG.playerObjectArray[PG.dealer].ID} is the dealer\nPlayer ${PG.playerObjectArray[PG.turn].ID}, it's your turn`;
+  PG.message += `\nPlayer ${PG.playerObjectArray[PG.dealer].ID} is the dealer\nPlayer ${PG.playerObjectArray[PG.turn].ID}, it's your turn`;
 
   // unnecessary for react app:
   // outputGameStatus(PG);
