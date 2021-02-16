@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /* eslint-disable no-param-reassign */
 
 // TO-DO: Remove these later
@@ -286,11 +287,8 @@ class App extends React.Component {
     // update the state in the database and begin the game
     // upon successful write
     axios.post(`/api/gamestate/${gameId}`, PG)
-      .then((res) => {
-        console.log(res);
-        this.setState(res.data, () => {
-          console.log(this.state);
-        });
+      .then(() => {
+        this.setState(PG);
       })
       .catch((err) => {
         console.log(err);
