@@ -13,8 +13,12 @@ const updateState = (req, res) => {
     new: true,
     upsert: true,
   };
-  const callback = (result) => {
-    res.status(201).send(result);
+  const callback = (err, result) => {
+    if (err) {
+      res.status(500).send(500);
+    } else {
+      res.status(201).send(result);
+    }
   };
   GameState.findByIdAndUpdate(req.params.gameId, req.body, options, callback);
 };

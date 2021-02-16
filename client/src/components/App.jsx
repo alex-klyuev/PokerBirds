@@ -9,6 +9,7 @@
 // GF = game functions
 
 import React from 'react';
+import PropTypes from 'prop-types';
 import axios from 'axios';
 import StartUpForm from './StartUpForm';
 import PlayerContainer from './PlayerContainer';
@@ -18,11 +19,14 @@ import GF from '../gameLogic/gameFunctions';
 import Player from '../gameLogic/Player';
 
 class App extends React.Component {
-  constructor() {
-    super();
+  constructor(props) {
+    super(props);
+
+    const { gameId } = this.props;
 
     // GAME STATE is managed here
     this.state = {
+      _id: gameId,
       gameUnderway: false,
       playerObjectArray: [],
       numPlayers: 0,
@@ -256,6 +260,8 @@ class App extends React.Component {
   // this function is actually redudant with the "refresh dealer round" function;
   // will refactor later
   startDealerRound(PG) {
+    const { gameId } = this.props;
+
     // build a new full deck and deal cards to the players
     GF.buildDeck(PG);
     GF.dealCards(PG);
@@ -279,7 +285,16 @@ class App extends React.Component {
 
     // update the state in the database and begin the game
     // upon successful write
-    this.setState(PG);
+    axios.post(`/api/gamestate/${gameId}`, PG)
+      .then((res) => {
+        console.log(res);
+        this.setState(res.data, () => {
+          console.log(this.state);
+        });
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   }
 
   // --- RENDER VIEW FUNCTIONS ---
@@ -333,5 +348,9 @@ class App extends React.Component {
     return this.renderStartUpView();
   }
 }
+
+App.propTypes = {
+  gameId: PropTypes.string.isRequired,
+};
 
 export default App;

@@ -2,4 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import App from './components/App';
 
-ReactDOM.render(<App />, document.getElementById('app'));
+const path = window.location.pathname;
+const gameId = path.split('/')[1];
+
+ReactDOM.render(<App gameId={gameId} />, document.getElementById('app'));
