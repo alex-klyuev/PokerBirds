@@ -361,8 +361,12 @@ const dealCards = (PG) => {
 
 // increments turn so that it can loop around the table
 const incrementTurn = (PG) => {
-  PG.turn++;
+  PG.turn += 1;
   PG.turn %= PG.playerObjectArray.length;
+
+  // TO-DO: fix the message box
+  // eslint-disable-next-line max-len
+  // PG.message = `Player ${PG.playerObjectArray[PG.dealer].ID} is the dealer\nPlayer ${PG.playerObjectArray[PG.turn].ID}, it's your turn`;
 };
 
 // this function finds the next player that's still in the game and increments the turn to them
