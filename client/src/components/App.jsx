@@ -246,6 +246,7 @@ class App extends React.Component {
   // --- GAME FLOW CONTROL FUNCTIONS ---
 
   startGame() {
+    const { gameId } = this.props;
     const PG = this.state;
 
     // pick random player to begin as the first dealer
@@ -255,34 +256,8 @@ class App extends React.Component {
     // pick a color for the game
     PG.deckColor = Math.floor(Math.random() * 2) ? 'Blue' : 'Red';
 
-    this.startDealerRound(PG);
-  }
-
-  // this function is actually redudant with the "refresh dealer round" function;
-  // will refactor later
-  startDealerRound(PG) {
-    const { gameId } = this.props;
-
-    // build a new full deck and deal cards to the players
-    GF.buildDeck(PG);
-    GF.dealCards(PG);
-
-    // set turn to small blind, next after dealer
-    PG.turn = PG.dealer;
-    GF.incrementTurn(PG);
-
-    // post blinds
-    GF.postBlinds(PG);
-
-    // TO-DO: Modify to be more dynamic with the UI
-    // (focus that player somehow, gray out the others, etc.)
-    PG.message = `Player ${PG.playerObjectArray[PG.dealer].ID} is the dealer\nPlayer ${PG.playerObjectArray[PG.turn].ID}, it's your turn`;
-
-    // edge case scenario where there are only 2 players and sb = bb, first player to act is sb
-    // and this allows them to check
-    if (PG.playerObjectArray[PG.turn].actionState === 'SB' && PG.smallBlind === PG.bigBlind) {
-      PG.allowCheck = true;
-    }
+    // start the dealer round
+    GF.refreshDealerRound(PG);
 
     // update the state in the database and begin the game
     // upon successful write
