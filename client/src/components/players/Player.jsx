@@ -31,9 +31,8 @@ const Text = styled.div`
 const Player = (props) => {
   const {
     player,
-    deckColor,
-    turn,
-    minBet,
+    PG,
+    handlePlayerAction,
   } = props;
 
   // 3 card view options: player is out of the game,
@@ -42,8 +41,13 @@ const Player = (props) => {
   let minBetView = <Text />;
   let playerActionView = <PlayerActions empty />;
   if (!player.inGame) {
-    cardView = <CardBox />;
-  } else if (player.ID === turn + 1 && player.cards[0].length !== 0) {
+    cardView = (
+      <CardBox>
+        <CardContainer />
+        <CardContainer />
+      </CardBox>
+    );
+  } else if (player.ID === PG.turn + 1 && player.cards[0].length !== 0) {
     // the && above is a janky way of handling game initialization
     cardView = (
       <CardBox>
@@ -57,22 +61,30 @@ const Player = (props) => {
     );
 
     // TO-DO: refactor min bet to be part of the message box
+    // min bet is equal to the previous bet plus the min raise
     minBetView = (
       <Text>
         Min bet: $
-        {GF.convertToDollars(minBet)}
+        {GF.convertToDollars(PG.previousBet + PG.minRaise)}
       </Text>
     );
 
-    playerActionView = <PlayerActions empty={false} player={player} />;
+    playerActionView = (
+      <PlayerActions
+        empty={false}
+        player={player}
+        PG={PG}
+        handlePlayerAction={handlePlayerAction}
+      />
+    );
   } else {
     cardView = (
       <CardBox>
         <CardContainer>
-          <img alt="" className="card" src={`lib/cards/${deckColor}_Back.svg`} />
+          <img alt="" className="card" src={`lib/cards/${PG.deckColor}_Back.svg`} />
         </CardContainer>
         <CardContainer>
-          <img alt="" className="card" src={`lib/cards/${deckColor}_Back.svg`} />
+          <img alt="" className="card" src={`lib/cards/${PG.deckColor}_Back.svg`} />
         </CardContainer>
       </CardBox>
     );
@@ -109,9 +121,8 @@ const Player = (props) => {
 
 Player.propTypes = {
   player: PropTypes.shape(/* fill me in */).isRequired,
-  turn: PropTypes.number.isRequired,
-  minBet: PropTypes.number.isRequired,
-  deckColor: PropTypes.string.isRequired,
+  PG: PropTypes.shape(/* fill me in */).isRequired,
+  handlePlayerAction: PropTypes.func.isRequired,
 };
 
 export default Player;

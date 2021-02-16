@@ -16,7 +16,7 @@ const Container = styled.div`
 const PlayerContainer = (props) => {
   const {
     PG,
-    handleRaise,
+    handlePlayerAction,
   } = props;
 
   return (
@@ -25,10 +25,8 @@ const PlayerContainer = (props) => {
         <Player
           key={player.ID}
           player={player}
-          deckColor={PG.deckColor}
-          turn={PG.turn}
-          minBet={PG.previousBet + PG.minRaise}
-          handleRaise={handleRaise}
+          PG={PG}
+          handlePlayerAction={handlePlayerAction}
         />
       ))}
     </Container>
@@ -37,7 +35,7 @@ const PlayerContainer = (props) => {
 
 PlayerContainer.propTypes = {
   PG: PropTypes.shape(/* fill me in */).isRequired,
-  handleRaise: PropTypes.func.isRequired,
+  handlePlayerAction: PropTypes.func.isRequired,
 };
 
 export default PlayerContainer;

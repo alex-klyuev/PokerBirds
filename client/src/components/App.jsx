@@ -50,6 +50,7 @@ class App extends React.Component {
     this.registerSmallBlind = this.registerSmallBlind.bind(this);
     this.registerBigBlind = this.registerBigBlind.bind(this);
     this.startGame = this.startGame.bind(this);
+    this.handlePlayerAction = this.handlePlayerAction.bind(this);
     // this.handleRaise = this.handleRaise.bind(this);
   }
 
@@ -68,11 +69,27 @@ class App extends React.Component {
 
   // --- PLAYER INTERFACE FUNCTIONS ---
 
-  handleRaise(ID, bet) {
-    bet = GF.convertToCents(bet);
+  handlePlayerAction(action) {
     const PG = this.state;
-    PG.playerObjectArray[ID - 1].raise(bet, PG);
-    this.setState(PG);
+    // eslint-disable-next-line default-case
+    switch (action[0]) {
+      case 'call':
+        PG.playerObjectArray[PG.turn].call(PG);
+        break;
+      case 'raise':
+        PG.playerObjectArray[PG.turn].raise(action[1], PG);
+        break;
+      case 'fold':
+        PG.playerObjectArray[PG.turn].fold();
+        break;
+      case 'check':
+        PG.playerObjectArray[PG.turn].check();
+        break;
+    }
+
+    this.setState(PG, () => {
+      console.log(this.state);
+    });
   }
 
   // --- GAME STARTUP FUNCTIONS ---
@@ -171,7 +188,7 @@ class App extends React.Component {
         <TableContainer PG={PG} />
         <PlayerContainer
           PG={PG}
-          handleRaise={this.handleRaise}
+          handlePlayerAction={this.handlePlayerAction}
         />
         <MessageBox message={PG.message} />
       </div>
