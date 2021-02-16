@@ -5,8 +5,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
-
-// GF is short for game functions
 import GF from '../gameLogic/gameFunctions';
 
 const Input = styled.span`
@@ -125,9 +123,9 @@ class StartUpForm extends React.Component {
       smallBlind: GF.convertToDollars(smallBlind),
       bigBlind: GF.convertToDollars(bigBlind),
     };
-    // kind of janky...handles all 4 values' uninitialized conditions
-    // numPlayers at 0, buyIn, smallBlind, and bigBlind at -1
-    if (inputs[field] <= 0) {
+
+    // show nothing if field is not initialized yet; otherwise show their choice
+    if (inputs[field] === 0) {
       return null;
     }
     return (
@@ -141,6 +139,7 @@ class StartUpForm extends React.Component {
       registerBuyIn,
       registerSmallBlind,
       registerBigBlind,
+      startGame,
     } = this.props;
 
     const {
@@ -279,7 +278,7 @@ class StartUpForm extends React.Component {
             if (!this.validateAll()) {
               return;
             }
-            alert('Game begins!');
+            startGame();
           }}
         >
           Play!
@@ -294,6 +293,7 @@ StartUpForm.propTypes = {
   registerBuyIn: PropTypes.func.isRequired,
   registerSmallBlind: PropTypes.func.isRequired,
   registerBigBlind: PropTypes.func.isRequired,
+  startGame: PropTypes.func.isRequired,
   numPlayers: PropTypes.number.isRequired,
   buyIn: PropTypes.number.isRequired,
   smallBlind: PropTypes.number.isRequired,

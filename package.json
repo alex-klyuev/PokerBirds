@@ -7,6 +7,16 @@
     "react-dev": "webpack -w",
     "build": "webpack"
   },
+  "dependencies": {
+    "axios": "^0.21.1",
+    "express": "^4.17.1",
+    "mongoose": "^5.11.16",
+    "nodemon": "^2.0.7",
+    "prop-types": "^15.7.2",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1",
+    "styled-components": "^5.2.1"
+  },
   "devDependencies": {
     "@babel/core": "^7.12.16",
     "@babel/preset-env": "^7.12.16",
@@ -20,15 +30,5 @@
     "eslint-plugin-react-hooks": "^4.2.0",
     "webpack": "^5.21.2",
     "webpack-cli": "^4.5.0"
-  },
-  "dependencies": {
-    "axios": "^0.21.1",
-    "express": "^4.17.1",
-    "mongoose": "^5.11.16",
-    "nodemon": "^2.0.7",
-    "prop-types": "^15.7.2",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1",
-    "styled-components": "^5.2.1"
   }
 }

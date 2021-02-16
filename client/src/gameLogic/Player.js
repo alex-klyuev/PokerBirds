@@ -1,3 +1,4 @@
+/* eslint-disable no-param-reassign */
 class Player {
   constructor(ID) {
     this.ID = ID;
@@ -18,7 +19,8 @@ class Player {
 
     const newStack = this.stack - raiseAmount;
     if (newStack < 0) {
-      console.error(`Player ${this.ID} cannot bet ${bet} because their stack would go negative.`);
+      // eslint-disable-next-line no-alert
+      alert(`Player ${this.ID} cannot bet ${bet} because their stack would go negative.`);
       return;
     }
 
