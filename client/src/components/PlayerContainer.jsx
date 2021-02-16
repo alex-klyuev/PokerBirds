@@ -6,7 +6,7 @@ import Player from './players/Player';
 const Container = styled.div`
   display: flex;
   justify-content: space-around;
-  height: 215px;
+  height: 300px;
   width: 100vw;
   padding-left: 15px;
   padding-right: 15px;

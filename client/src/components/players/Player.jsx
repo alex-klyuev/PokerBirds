@@ -3,11 +3,12 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
+import PlayerActions from './PlayerActions';
 import GF from '../../gameLogic/gameFunctions';
 
 const Container = styled.div`
   width: 144px;
-  height: 215px;
+  height: 300px;
 `;
 
 const CardBox = styled.div`
@@ -39,6 +40,7 @@ const Player = (props) => {
   // player is in but not their turn, or it's player's turn
   let cardView;
   let minBetView = <Text />;
+  let playerActionView = <PlayerActions empty />;
   if (!player.inGame) {
     cardView = <CardBox />;
   } else if (player.ID === turn + 1 && player.cards[0].length !== 0) {
@@ -61,6 +63,8 @@ const Player = (props) => {
         {GF.convertToDollars(minBet)}
       </Text>
     );
+
+    playerActionView = <PlayerActions empty={false} player={player} />;
   } else {
     cardView = (
       <CardBox>
@@ -98,6 +102,7 @@ const Player = (props) => {
       </Text>
       {potCommitmentView}
       {minBetView}
+      {playerActionView}
     </Container>
   );
 };
