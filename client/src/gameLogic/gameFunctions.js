@@ -1,3 +1,4 @@
+/* eslint-disable no-param-reassign */
 const showdown = (PG) => {
   const showdownHandRanks = [];
   for (let i = 0; i < PG.playerObjectArray.length; i++) {
@@ -364,6 +365,19 @@ const incrementTurn = (PG) => {
   PG.turn %= PG.playerObjectArray.length;
 };
 
+// this function finds the next player that's still in the game and increments the turn to them
+const findNextPlayer = (PG) => {
+  // iterates starting from the current turn until it finds the next player that hasn't folded,
+  // then breaks the loop
+  for (let i = 0; i < PG.playerObjectArray.length; i += 1) {
+    if (!PG.playerObjectArray[PG.turn].inGame) {
+      incrementTurn(PG);
+    } else {
+      break;
+    }
+  }
+};
+
 const postBlinds = (PG) => {
   // post small blind
   PG.minRaise = 0;
@@ -383,11 +397,13 @@ const postBlinds = (PG) => {
   PG.allowCheck = false;
 };
 
+const randDeckArrayIdx = (PG) => Math.floor(Math.random() * PG.deckArray.length);
+
 // takes a card out of the deck and adds it to the board next opening.
 // will need to be called 3 times for the flop, once for turn and once for river.
 const addToBoard = (PG) => {
   const randInt = randDeckArrayIdx(PG);
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 5; i += 1) {
     if (PG.board[i] === '') {
       PG.board[i] = PG.deckArray[randInt];
       PG.deckArray.splice(randInt, 1);
@@ -418,8 +434,6 @@ const beautifyCard = (card) => {
       return num + card[1];
   }
 };
-
-const randDeckArrayIdx = (PG) => Math.floor(Math.random() * PG.deckArray.length);
 
 // this function logs the current game condition so that everyone can see it.
 // this includes the player id's, stacks, and cards to indicate if they're in the game or not.
@@ -514,6 +528,7 @@ const convertToCents = (value) => {
 
 // function to toggle the various methods corresponding to player actions
 const handlePlayerAction = (action, PG) => {
+  // eslint-disable-next-line default-case
   switch (action[0]) {
     case 'call':
       PG.playerObjectArray[PG.turn].call(PG);
@@ -531,17 +546,17 @@ const handlePlayerAction = (action, PG) => {
 };
 
 // Action round ending conditions fall into two categories:
-//  1. "No-raise": where there has been no raise and everyone checks or folds, or in the case of the pre-flop,
-//     calls, checks, or folds.
+//  1. "No-raise": where there has been no raise and everyone checks or folds,
+//  or in the case of the pre-flop, calls, checks, or folds.
 //  2. "Raise": where there is one remaining raiser and everyone else behind calls or folds.
 const checkActionRoundEndingCondition = (PG) => {
   let actionCounter1 = 0;
   let actionCounter2 = 0;
-  for (let i = 0; i < PG.playerObjectArray.length; i++) {
+  for (let i = 0; i < PG.playerObjectArray.length; i += 1) {
     // handles both pre-flop and post-flop "no raise" situations
     if (PG.playerObjectArray[i].actionState === 'call' || PG.playerObjectArray[i].actionState === 'fold'
             || PG.playerObjectArray[i].actionState === 'check' || PG.playerObjectArray[i].actionState === '') {
-      actionCounter1++;
+      actionCounter1 += 1;
     }
 
     // JJ-COMMENT: if else instead of two if statements?
@@ -549,7 +564,7 @@ const checkActionRoundEndingCondition = (PG) => {
     // handles "raise" situations
     if (PG.playerObjectArray[i].actionState === 'call' || PG.playerObjectArray[i].actionState === 'fold'
             || PG.playerObjectArray[i].actionState === '') {
-      actionCounter2++;
+      actionCounter2 += 1;
     }
   }
 
@@ -570,14 +585,15 @@ const checkActionRoundEndingCondition = (PG) => {
   return false;
 };
 
-// this function will end the dealer round when everyone except one person has folded. That person will win the pot.
-// This is one of two ways a dealer round can end - the other is with a showdown that has its own function.
+// this function will end the dealer round when everyone except one person has folded.
+// That person will win the pot. This is one of two ways a dealer round can end;
+// the other is with a showdown, which has its own function.
 const checkDealerRoundEndingCondition = (PG) => {
   let dealerCounter = 0;
   let winnerIndex;
-  for (let i = 0; i < PG.playerObjectArray.length; i++) {
+  for (let i = 0; i < PG.playerObjectArray.length; i += 1) {
     if (PG.playerObjectArray[i].actionState === 'fold' || PG.playerObjectArray[i].actionState === '') {
-      dealerCounter++;
+      dealerCounter += 1;
     } else {
       winnerIndex = i;
     }
@@ -586,7 +602,7 @@ const checkDealerRoundEndingCondition = (PG) => {
   if (dealerCounter === PG.playerObjectArray.length - 1) {
     // move pot to winner's stack
     PG.playerObjectArray[winnerIndex].stack += PG.pot;
-    console.log(`\nPlayer ${PG.playerObjectArray[winnerIndex].ID} wins $${convertToDollars(PG.pot)}`);
+    PG.message = `Player ${PG.playerObjectArray[winnerIndex].ID} wins $${convertToDollars(PG.pot)}`;
     PG.pot = 0;
     return true;
   }
@@ -598,7 +614,7 @@ const checkDealerRoundEndingCondition = (PG) => {
 // this function restarts the following action round
 const refreshActionRound = (PG) => {
   // clear pot commitment and action states; cards remain the same; reset PG.minraise
-  for (let i = 0; i < PG.playerObjectArray.length; i++) {
+  for (let i = 0; i < PG.playerObjectArray.length; i += 1) {
     PG.playerObjectArray[i].potCommitment = 0;
     PG.playerObjectArray[i].actionState = '';
   }
@@ -613,7 +629,7 @@ const refreshActionRound = (PG) => {
   // hacky way of setting players to still be in the action round so that the ending condition
   // functions don't immediately read the turn as over at the beginning of the round (could probably
   // be improved to be more clear). Still a blank string so that nothing is output to the board
-  for (let i = 0; i < PG.playerObjectArray.length; i++) {
+  for (let i = 0; i < PG.playerObjectArray.length; i += 1) {
     if (PG.playerObjectArray[i].inGame) {
       PG.playerObjectArray[i].actionState = ' ';
     }
@@ -622,21 +638,22 @@ const refreshActionRound = (PG) => {
   // allow checking at beginning of round
   PG.allowCheck = true;
 
-  outputGameStatus(PG);
-  outputPlayerInquiry(PG);
+  // unnecessary for react:
+  // outputGameStatus(PG);
+  // outputPlayerInquiry(PG);
 };
 
 // this function restarts the following dealer round
 const refreshDealerRound = (PG) => {
   // refresh all these variables.
-  for (let i = 0; i < PG.playerObjectArray.length; i++) {
+  for (let i = 0; i < PG.playerObjectArray.length; i += 1) {
     PG.playerObjectArray[i].potCommitment = 0;
     PG.playerObjectArray[i].actionState = '';
     PG.playerObjectArray[i].cards = [[], []];
     PG.playerObjectArray[i].inGame = true;
 
-    // If a player lost their money, they stay out. Can clear them out completely later.
-    // Doesn't really matter though because browser version will have option to buy back in, leave, etc.
+    // If a player lost their money, they stay out;
+    // buy back or leave table functionality not included
 
     // DOUBLE CHECK THIS when showdown and side-pot parts are developed
     if (PG.playerObjectArray[i].stack === 0) {
@@ -645,7 +662,7 @@ const refreshDealerRound = (PG) => {
   }
 
   // increment dealer
-  PG.dealer++;
+  PG.dealer += 1;
   PG.dealer %= PG.playerObjectArray.length;
 
   // clear the board, build a new full deck, and deal cards to the players
@@ -661,22 +678,11 @@ const refreshDealerRound = (PG) => {
   postBlinds(PG);
 
   // declare the dealer, output the first game board, and announce the first turn
-  console.log(`\nPlayer ${PG.playerObjectArray[PG.dealer].ID} is the dealer.`);
-  outputGameStatus(PG);
-  outputPlayerInquiry(PG);
-};
+  PG.message = `Player ${PG.playerObjectArray[PG.dealer].ID} is the dealer\nPlayer ${PG.playerObjectArray[PG.turn].ID}, it's your turn`;
 
-// this function finds the next player that's still in the game and increments the turn to them
-const findNextPlayer = (PG) => {
-  // iterates starting from the current turn until it finds the next player that hasn't folded,
-  // then breaks the loop
-  for (let i = 0; i < PG.playerObjectArray.length; i += 1) {
-    if (!PG.playerObjectArray[PG.turn].inGame) {
-      incrementTurn(PG);
-    } else {
-      break;
-    }
-  }
+  // unnecessary for react app:
+  // outputGameStatus(PG);
+  // outputPlayerInquiry(PG);
 };
 
 export default {

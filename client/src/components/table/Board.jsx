@@ -38,7 +38,7 @@ const Board = (props) => {
             return null;
           }
           return (
-            <CardContainer>
+            <CardContainer key={card}>
               <img alt="" className="card" src={`lib/cards/${GF.beautifyCard(card)}.svg`} />
             </CardContainer>
           );

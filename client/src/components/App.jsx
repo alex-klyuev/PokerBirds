@@ -87,8 +87,96 @@ class App extends React.Component {
         break;
     }
 
+    // in the spirit of modularity, this function will pass the modified PG on to the next handler,
+    // which will in turn update the state
+    this.handleActionRound(PG);
+  }
+
+  // this function handles all action rounds
+  handleActionRound(PG) {
+    // handle the pre-flop
+    if (PG.actionRoundState === 0) {
+      // TODO(anyone): merge incrementTurn into findNextPlayer
+      GF.incrementTurn(PG);
+      // function to find the next player that is still in the game
+      GF.findNextPlayer(PG);
+
+      // once turn is incremented, following code is what needs to be executed
+      // for the next player before next user input
+
+      // pre-flop, the big blind (and the small blind if it's equal to big blind)
+      // have the option to check if all other players called or folded.
+      let preflopCounter = 0;
+
+      // toggles the check state for the small blind if it's equal to the big blind
+      if (PG.playerObjectArray[PG.turn].actionState === 'SB' && PG.smallBlind === PG.bigBlind) {
+        // count active raises on board; if the SB & BB are the only ones, they can check
+        for (let i = 0; i < PG.playerObjectArray.length; i += 1) {
+          if (PG.playerObjectArray[i].actionState !== 'raise') {
+            preflopCounter += 1;
+          }
+        }
+
+        if (preflopCounter === PG.playerObjectArray.length) {
+          PG.allowCheck = true;
+        }
+      }
+
+      // toggles the check state for the big blind - unless the BB is equal to the SB, in which case
+      // it has already been toggled.
+
+      // edge case: big blind re-raised and all other players called. Hmmm
+      // TODO(anyone): Not sure if this is a TODO still or not? ^^
+      if (PG.playerObjectArray[PG.turn].actionState === 'BB' && PG.smallBlind !== PG.bigBlind) {
+        // count active raises on board; if the BB's is the only one, they can check
+        for (let i = 0; i < PG.playerObjectArray.length; i += 1) {
+          if (PG.playerObjectArray[i].actionState !== 'raise') {
+            preflopCounter += 1;
+          }
+        }
+        if (preflopCounter === PG.playerObjectArray.length) {
+          PG.allowCheck = true;
+        }
+      }
+
+      // check if dealer round is done. comes before action round
+      // because of edge case where one player checks and all others fold.
+      if (GF.checkDealerRoundEndingCondition(PG)) {
+        // will set everything through the blinds up for next round
+        GF.refreshDealerRound(PG);
+        PG.actionRoundState = 0;
+      }
+
+      // check if action round is done
+      if (GF.checkActionRoundEndingCondition(PG)) {
+        // flop
+        GF.flop(PG);
+        console.log('with flop: ', PG);
+
+        // remaining code that is the same between each action round
+        GF.refreshActionRound(PG);
+
+        PG.actionRoundState += 1;
+      }
+    }
+
+    // handle the flop
+    if (PG.actionRoundState === 1) {
+
+    }
+
+    // handle the turn
+    if (PG.actionRoundState === 0) {
+
+    }
+
+    // handle the river
+    if (PG.actionRoundState === 0) {
+
+    }
+
     this.setState(PG, () => {
-      console.log(this.state);
+      console.log('pre-flop ended: ', this.state);
     });
   }
 
@@ -167,7 +255,7 @@ class App extends React.Component {
 
     // TO-DO: Modify to be more dynamic with the UI
     // (focus that player somehow, gray out the others, etc.)
-    PG.message = `Player ${PG.dealer + 1} is the dealer\nPlayer ${PG.turn + 1}, it's your turn`;
+    PG.message = `Player ${PG.playerObjectArray[PG.dealer].ID} is the dealer\nPlayer ${PG.playerObjectArray[PG.turn].ID}, it's your turn`;
 
     // edge case scenario where there are only 2 players and sb = bb, first player to act is sb
     // and this allows them to check

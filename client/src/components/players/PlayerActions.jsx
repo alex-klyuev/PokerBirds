@@ -43,6 +43,8 @@ class PlayerActions extends React.Component {
     });
   }
 
+  // validate that player action is allowed, and return an object for use in App
+  // to update the state
   // eslint-disable-next-line class-methods-use-this
   validatePlayerAction(input) {
     const { PG } = this.props;
@@ -50,15 +52,12 @@ class PlayerActions extends React.Component {
     const actionInput = input.slice(0, 4);
     let numericInput = value;
 
-    // some imperfect inputs are allowed in this game for the sake of simplicity of the code.
-    // it's designed so that player intent is never misunderstood, however
-    // this else if statement both validates the input
+    // this multi-block if statement both validates the input
     // and returns call, check, or fold if it's one of those.
     // if it's a raise, it goes on to the next section to validate the amount
     if (actionInput === 'call') {
       // validate that there is a raise on the board to be called.
-      // Second part is to allow the SB to call
-      // when it is not equal to the big blind
+      // Second part is to allow the SB to call when it is not equal to the big blind
 
       let raiseCounter = 0;
       for (let i = 0; i < PG.playerObjectArray.length; i += 1) {
