@@ -20,7 +20,7 @@ class App extends React.Component {
     // GAME STATE is managed here
     this.state = {
       gameUnderway: false,
-      playerObjectArray: [],
+      playerObjectArray: [{}],
       numPlayers: 0,
       buyIn: 0,
       // gameUnderway: true,
@@ -148,14 +148,14 @@ class App extends React.Component {
   // --- RENDER VIEW FUNCTIONS ---
 
   renderGameView() {
-    const { numPlayers, buyIn } = this.state;
+    const { numPlayers, buyIn, playerObjectArray } = this.state;
 
     return (
       <div>
         <TableContainer />
         <PlayerContainer
-          numPlayers={numPlayers}
           buyIn={buyIn}
+          playerObjectArray={playerObjectArray}
           handleRaise={this.handleRaise}
         />
         <MessageBox message="message box" />

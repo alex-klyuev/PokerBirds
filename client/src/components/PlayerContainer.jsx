@@ -14,21 +14,19 @@ const Container = styled.div`
 `;
 
 const PlayerContainer = (props) => {
-  const { numPlayers, buyIn, handleRaise } = props;
-  const playerIds = [];
-
-  // ID's will be one-indexed to match how players think of the game
-  for (let i = 1; i <= numPlayers; i += 1) {
-    playerIds.push(i);
-  }
+  const {
+    buyIn,
+    playerObjectArray,
+    handleRaise,
+  } = props;
 
   return (
     <Container>
-      {playerIds.map((ID) => (
+      {playerObjectArray.map((player) => (
         <Player
-          key={ID}
-          ID={ID}
+          key={player.ID}
           buyIn={buyIn}
+          player={player}
           handleRaise={handleRaise}
         />
       ))}
@@ -37,9 +35,9 @@ const PlayerContainer = (props) => {
 };
 
 PlayerContainer.propTypes = {
-  numPlayers: PropTypes.number.isRequired,
   buyIn: PropTypes.number.isRequired,
   handleRaise: PropTypes.func.isRequired,
+  playerObjectArray: PropTypes.arrayOf(PropTypes.object.isRequired).isRequired,
 };
 
 export default PlayerContainer;
