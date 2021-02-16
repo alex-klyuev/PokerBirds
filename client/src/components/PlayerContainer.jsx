@@ -15,7 +15,6 @@ const Container = styled.div`
 
 const PlayerContainer = (props) => {
   const {
-    buyIn,
     playerObjectArray,
     handleRaise,
   } = props;
@@ -25,7 +24,6 @@ const PlayerContainer = (props) => {
       {playerObjectArray.map((player) => (
         <Player
           key={player.ID}
-          buyIn={buyIn}
           player={player}
           handleRaise={handleRaise}
         />
@@ -35,7 +33,6 @@ const PlayerContainer = (props) => {
 };
 
 PlayerContainer.propTypes = {
-  buyIn: PropTypes.number.isRequired,
   handleRaise: PropTypes.func.isRequired,
   playerObjectArray: PropTypes.arrayOf(PropTypes.object.isRequired).isRequired,
 };

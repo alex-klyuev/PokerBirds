@@ -100,8 +100,19 @@ class App extends React.Component {
   // (e.g. $20 is saved as 2000)
   // this allows players to play with cents without having to deal with decimals in the code
   registerBuyIn(buyIn) {
+    // eslint-disable-next-line no-param-reassign
+    buyIn = GF.convertToCents(Number(buyIn));
+
+    // assign the buy in to each player
+    const { playerObjectArray } = this.state;
+    playerObjectArray.forEach((player) => {
+      // eslint-disable-next-line no-param-reassign
+      player.stack = buyIn;
+    });
+
     this.setState({
-      buyIn: GF.convertToCents(Number(buyIn)),
+      playerObjectArray,
+      buyIn,
     });
   }
 
@@ -148,13 +159,12 @@ class App extends React.Component {
   // --- RENDER VIEW FUNCTIONS ---
 
   renderGameView() {
-    const { numPlayers, buyIn, playerObjectArray } = this.state;
+    const { playerObjectArray } = this.state;
 
     return (
       <div>
         <TableContainer />
         <PlayerContainer
-          buyIn={buyIn}
           playerObjectArray={playerObjectArray}
           handleRaise={this.handleRaise}
         />
