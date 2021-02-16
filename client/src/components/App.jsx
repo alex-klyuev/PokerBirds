@@ -11,6 +11,7 @@ import MessageBox from './MessageBox';
 
 // GF is short for game functions
 import GF from '../gameLogic/gameFunctions';
+import Player from '../gameLogic/Player';
 
 class App extends React.Component {
   constructor() {
@@ -18,12 +19,13 @@ class App extends React.Component {
 
     // GAME STATE is managed here
     this.state = {
-      // gameUnderway: false,
-      // numPlayers: 0,
-      // buyIn: 0,
-      gameUnderway: true,
-      numPlayers: 4,
-      buyIn: 100,
+      gameUnderway: false,
+      playerObjectArray: [],
+      numPlayers: 0,
+      buyIn: 0,
+      // gameUnderway: true,
+      // numPlayers: 4,
+      // buyIn: 100,
       smallBlind: 0,
       bigBlind: 0,
       dealerId: 0,
@@ -43,7 +45,7 @@ class App extends React.Component {
     this.registerSmallBlind = this.registerSmallBlind.bind(this);
     this.registerBigBlind = this.registerBigBlind.bind(this);
     this.startGame = this.startGame.bind(this);
-    this.handleRaise = this.handleRaise.bind(this);
+    // this.handleRaise = this.handleRaise.bind(this);
   }
 
   componentDidMount() {
@@ -54,7 +56,13 @@ class App extends React.Component {
 
   // --- PLAYER INTERFACE FUNCTIONS ---
 
-  handleRaise(bet) {
+  /* handleRaise(bet, raiseAmount) {
+
+    const {
+      pot,
+      actionState,
+    }
+
     PG.pot += raiseAmount;
 
     this.actionState = 'raise';
@@ -73,13 +81,18 @@ class App extends React.Component {
 
     // once there's been a raise, no one else can check in that action round.
     PG.allowCheck = false;
-  }
+  } */
 
   // --- GAME STARTUP FUNCTIONS ---
 
   registerNumPlayers(numPlayers) {
+    const playerObjectArray = [];
+    for (let i = 0; i < Number(numPlayers); i += 1) {
+      playerObjectArray.push(new Player(i + 1));
+    }
     this.setState({
       numPlayers: Number(numPlayers),
+      playerObjectArray,
     });
   }
 
@@ -125,6 +138,11 @@ class App extends React.Component {
     // Post blinds - need access to players
     // Shuffle deck
     // Assign cards
+    this.setState({
+      dealerId,
+    }, () => {
+      console.log(this.state);
+    });
   }
 
   // --- RENDER VIEW FUNCTIONS ---

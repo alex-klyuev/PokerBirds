@@ -28,7 +28,7 @@ class Player extends React.Component {
 
   raise(bet) {
     const { ID, handleRaise } = this.props;
-    let { potCommitment, stack } = this.state;
+    let { potCommitment, stack, actionState } = this.state;
 
     // since user inputs total bet, the raise amount is
     // the difference between the bet and player's pot commitment
@@ -43,10 +43,10 @@ class Player extends React.Component {
       return;
     }
 
-    // increment pot commitment
+    // increment pot commitment and update action state
     potCommitment += raiseAmount;
 
-    // player state to be updated: stack and potcommitment
+    // player state to be updated: stack, potcommitment, and actionstate
     // game state to be updated: action state, pot, min raise, previousBet, allowCheck
 
     // since two state updates are async,
