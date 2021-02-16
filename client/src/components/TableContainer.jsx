@@ -7,7 +7,7 @@ import Pot from './table/Pot';
 const Container = styled.div`
   display: flex;
   justify-content: space-around;
-  height: 400px;
+  height: 500px;
   width: 100vw;
   padding-left: 15px;
   padding-right: 15px;

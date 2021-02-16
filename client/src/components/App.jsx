@@ -1,3 +1,4 @@
+/* eslint-disable class-methods-use-this */
 // REMOVE THIS LATER:
 /* eslint-disable react/no-unused-state */
 // no styling for now...let's get the game functionality working
@@ -6,6 +7,7 @@ import React from 'react';
 import StartUpForm from './StartUpForm';
 import PlayerContainer from './PlayerContainer';
 import TableContainer from './TableContainer';
+import MessageBox from './MessageBox';
 
 // GF is short for game functions
 import GF from '../gameLogic/gameFunctions';
@@ -16,12 +18,15 @@ class App extends React.Component {
 
     // GAME STATE is managed here
     this.state = {
+      // gameUnderway: false,
+      // numPlayers: 0,
+      // buyIn: 0,
       gameUnderway: true,
-      numPlayers: 0,
-      buyIn: 0,
+      numPlayers: 4,
+      buyIn: 100,
       smallBlind: 0,
       bigBlind: 0,
-      dealer: 0,
+      dealerId: 0,
       turn: 0,
       pot: 0,
       // 0 = pre-flop, 1 = flop, 2 = turn, 3 = river
@@ -38,6 +43,7 @@ class App extends React.Component {
     this.registerSmallBlind = this.registerSmallBlind.bind(this);
     this.registerBigBlind = this.registerBigBlind.bind(this);
     this.startGame = this.startGame.bind(this);
+    this.handleRaise = this.handleRaise.bind(this);
   }
 
   componentDidMount() {
@@ -45,6 +51,31 @@ class App extends React.Component {
     // if gameUnderway = true, render game view and populate game
     // if gameUnderway = false, render startup form view
   }
+
+  // --- PLAYER INTERFACE FUNCTIONS ---
+
+  handleRaise(bet) {
+    PG.pot += raiseAmount;
+
+    this.actionState = 'raise';
+
+    // if the amount bet is greater than the previous bet and the minimum raise,
+    // update the minimum raise. this should always occur unless
+    // the player raises all-in without having enough to go above the minimum raise
+    if (bet > PG.previousBet + PG.minRaise) {
+      PG.minRaise = bet - PG.previousBet;
+    } // else {} should have code here to handle edge case 1 (see bottom notes)
+
+    this.potCommitment += raiseAmount;
+
+    // previous bet is updated. see bottom notes for edge case 2: second scenario assumed
+    PG.previousBet = this.potCommitment;
+
+    // once there's been a raise, no one else can check in that action round.
+    PG.allowCheck = false;
+  }
+
+  // --- GAME STARTUP FUNCTIONS ---
 
   registerNumPlayers(numPlayers) {
     this.setState({
@@ -73,20 +104,43 @@ class App extends React.Component {
     });
   }
 
+  // --- GAME FLOW CONTROL FUNCTIONS ---
+
   startGame() {
+    // pick random dealer
+    const { numPlayers } = this.state;
+    const dealerId = Math.floor(Math.random() * numPlayers + 1);
+
+    // after updating state, start the dealer round
     this.setState({
+      dealerId,
       gameUnderway: true,
-    });
+    }, this.startDealerRound);
   }
 
+  startDealerRound() {
+    // Increment dealer
+    let { dealerId } = this.state;
+    dealerId += 1;
+    // Post blinds - need access to players
+    // Shuffle deck
+    // Assign cards
+  }
+
+  // --- RENDER VIEW FUNCTIONS ---
+
   renderGameView() {
-    const { numPlayers } = this.state;
+    const { numPlayers, buyIn } = this.state;
 
     return (
       <div>
-        <div>Game View</div>
         <TableContainer />
-        <PlayerContainer numPlayers={numPlayers} />
+        <PlayerContainer
+          numPlayers={numPlayers}
+          buyIn={buyIn}
+          handleRaise={this.handleRaise}
+        />
+        <MessageBox message="message box" />
       </div>
     );
   }

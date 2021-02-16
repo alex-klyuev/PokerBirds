@@ -14,7 +14,7 @@ const Container = styled.div`
 `;
 
 const PlayerContainer = (props) => {
-  const { numPlayers } = props;
+  const { numPlayers, buyIn, handleRaise } = props;
   const playerIds = [];
 
   // ID's will be one-indexed to match how players think of the game
@@ -24,13 +24,22 @@ const PlayerContainer = (props) => {
 
   return (
     <Container>
-      {playerIds.map((id) => <Player key={id} id={id} />)}
+      {playerIds.map((ID) => (
+        <Player
+          key={ID}
+          ID={ID}
+          buyIn={buyIn}
+          handleRaise={handleRaise}
+        />
+      ))}
     </Container>
   );
 };
 
 PlayerContainer.propTypes = {
   numPlayers: PropTypes.number.isRequired,
+  buyIn: PropTypes.number.isRequired,
+  handleRaise: PropTypes.func.isRequired,
 };
 
 export default PlayerContainer;
