@@ -365,8 +365,7 @@ const incrementTurn = (PG) => {
   PG.turn %= PG.playerObjectArray.length;
 
   // TO-DO: fix the message box
-  // eslint-disable-next-line max-len
-  // PG.message = `Player ${PG.playerObjectArray[PG.dealer].ID} is the dealer\nPlayer ${PG.playerObjectArray[PG.turn].ID}, it's your turn`;
+  PG.message = `Player ${PG.playerObjectArray[PG.dealer].ID} is the dealer\nPlayer ${PG.playerObjectArray[PG.turn].ID}, it's your turn`;
 };
 
 // this function finds the next player that's still in the game and increments the turn to them
@@ -687,7 +686,7 @@ const refreshDealerRound = (PG) => {
   }
 
   // declare the dealer, output the first game board, and announce the first turn
-  PG.message += `\nPlayer ${PG.playerObjectArray[PG.dealer].ID} is the dealer\nPlayer ${PG.playerObjectArray[PG.turn].ID}, it's your turn`;
+  PG.message = `\nPlayer ${PG.playerObjectArray[PG.dealer].ID} is the dealer\nPlayer ${PG.playerObjectArray[PG.turn].ID}, it's your turn`;
 };
 
 export default {

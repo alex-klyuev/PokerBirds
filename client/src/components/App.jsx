@@ -53,6 +53,7 @@ class App extends React.Component {
     this.registerSmallBlind = this.registerSmallBlind.bind(this);
     this.registerBigBlind = this.registerBigBlind.bind(this);
     this.startGame = this.startGame.bind(this);
+    this.endGame = this.endGame.bind(this);
     this.handlePlayerAction = this.handlePlayerAction.bind(this);
     // this.handleRaise = this.handleRaise.bind(this);
   }
@@ -83,7 +84,7 @@ class App extends React.Component {
       });
   }
 
-  // --- PLAYER INTERFACE FUNCTIONS ---
+  // --- PLAYER INTERFACE & GAME FLOW FUNCTIONS ---
 
   handlePlayerAction(action) {
     const PG = this.state;
@@ -269,7 +270,7 @@ class App extends React.Component {
     });
   }
 
-  // --- GAME FLOW CONTROL FUNCTIONS ---
+  // --- START & STOP GAME FUNCTIONS ---
 
   startGame() {
     const { gameId } = this.props;
@@ -287,6 +288,38 @@ class App extends React.Component {
 
     // update the state in the database and do the same
     // in the app upon successful write
+    axios.post(`/api/gamestate/${gameId}`, PG)
+      .then(() => {
+        this.setState(PG);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }
+
+  endGame() {
+    const { gameId } = this.props;
+    const PG = {
+      _id: gameId,
+      gameUnderway: false,
+      playerObjectArray: [],
+      numPlayers: 0,
+      buyIn: 0,
+      smallBlind: 0,
+      bigBlind: 0,
+      dealer: 0,
+      turn: 0,
+      pot: 0,
+      actionRoundState: 0,
+      board: ['', '', '', '', ''],
+      deckArray: [],
+      deckColor: '',
+      minRaise: 0,
+      previousBet: 0,
+      allowCheck: false,
+      message: '',
+    };
+
     axios.post(`/api/gamestate/${gameId}`, PG)
       .then(() => {
         this.setState(PG);
@@ -327,7 +360,7 @@ class App extends React.Component {
           PG={PG}
           handlePlayerAction={this.handlePlayerAction}
         />
-        <MessageBox message={PG.message} />
+        <MessageBox message={PG.message} endGame={this.endGame} />
       </div>
     );
   }
