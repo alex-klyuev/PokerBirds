@@ -72,7 +72,6 @@ const Player = (props) => {
     playerActionView = (
       <PlayerActions
         empty={false}
-        player={player}
         PG={PG}
         handlePlayerAction={handlePlayerAction}
       />

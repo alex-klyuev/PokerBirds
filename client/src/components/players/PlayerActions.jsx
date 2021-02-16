@@ -173,7 +173,7 @@ class PlayerActions extends React.Component {
           <Button
             type="button"
             onClick={() => {
-              const inputAction = this.validatePlayerAction('bet');
+              const inputAction = this.validatePlayerAction('bet ');
               if (!inputAction.valid) {
                 return;
               }
@@ -193,13 +193,11 @@ class PlayerActions extends React.Component {
 
 PlayerActions.propTypes = {
   empty: PropTypes.bool.isRequired,
-  player: PropTypes.shape(/* fill me in */),
   PG: PropTypes.shape(/* fill me in */),
   handlePlayerAction: PropTypes.func,
 };
 
 PlayerActions.defaultProps = {
-  player: null,
   PG: null,
   handlePlayerAction: null,
 };
