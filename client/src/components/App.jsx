@@ -19,13 +19,13 @@ class App extends React.Component {
 
     // GAME STATE is managed here
     this.state = {
-      playerObjectArray: [{}],
+      playerObjectArray: [],
       gameUnderway: false,
       numPlayers: 0,
       buyIn: 0,
       // gameUnderway: true,
       // numPlayers: 4,
-      // buyIn: 100,
+      // buyIn: 10000,
       smallBlind: 0,
       bigBlind: 0,
       dealer: 0,
@@ -35,6 +35,7 @@ class App extends React.Component {
       actionRoundState: 0,
       board: ['', '', '', '', ''],
       deckArray: [],
+      deckColor: '',
       minRaise: 0,
       previousBet: 0,
       allowCheck: false,
@@ -53,6 +54,13 @@ class App extends React.Component {
     // make request to API
     // if gameUnderway = true, render game view and populate game
     // if gameUnderway = false, render startup form view
+
+    // for dev purposes:
+    // const PG = this.state;
+    // for (let i = 1; i <= Number(PG.numPlayers); i += 1) {
+    //   PG.playerObjectArray.push(new Player(i));
+    // }
+    // this.setState(PG);
   }
 
   // --- PLAYER INTERFACE FUNCTIONS ---
@@ -68,8 +76,8 @@ class App extends React.Component {
 
   registerNumPlayers(numPlayers) {
     const playerObjectArray = [];
-    for (let i = 0; i < Number(numPlayers); i += 1) {
-      playerObjectArray.push(new Player(i + 1));
+    for (let i = 1; i <= Number(numPlayers); i += 1) {
+      playerObjectArray.push(new Player(i));
     }
     this.setState({
       numPlayers: Number(numPlayers),
@@ -110,19 +118,17 @@ class App extends React.Component {
   // --- GAME FLOW CONTROL FUNCTIONS ---
 
   startGame() {
-    // pick random dealer
-    const { numPlayers } = this.state;
-    const dealer = Math.floor(Math.random() * numPlayers + 1);
+    const PG = this.state;
+
+    // pick random player to begin as the first dealer
+    PG.dealer = Math.floor(Math.random() * PG.playerObjectArray.length);
+    PG.gameUnderway = true;
 
     // after updating state, start the dealer round
-    this.setState({
-      dealer,
-      gameUnderway: true,
-    }, this.startDealerRound);
+    this.setState(PG, this.startDealerRound);
   }
 
   startDealerRound() {
-    // Increment dealer
     const PG = this.state;
 
     // build a new full deck and deal cards to the players
@@ -141,10 +147,11 @@ class App extends React.Component {
     // all other players should have flipped cards
     // Pot should be initialized
     // GF.outputGameStatus(PG);
+    PG.deckColor = Math.floor(Math.random() * 2) ? 'Blue' : 'Red';
 
     // TO-DO: Modify to be more dynamic with the UI
     // (focus that player somehow, gray out the others, etc.)
-    PG.message = `Player ${PG.dealer} is the dealer\nPlayer ${PG.turn}, it's your turn`;
+    PG.message = `Player ${PG.dealer + 1} is the dealer\nPlayer ${PG.turn + 1}, it's your turn`;
 
     // edge case scenario where there are only 2 players and sb = bb, first player to act is sb
     // and this allows them to check
@@ -157,27 +164,19 @@ class App extends React.Component {
     });
   }
 
-  postBlinds() {
-    const PG = this.state;
-    GF.postBlinds(PG);
-    this.setState(PG, () => {
-      console.log(this.state);
-    });
-  }
-
   // --- RENDER VIEW FUNCTIONS ---
 
   renderGameView() {
-    const { playerObjectArray, message } = this.state;
+    const PG = this.state;
 
     return (
       <div>
-        <TableContainer />
+        <TableContainer PG={PG} />
         <PlayerContainer
-          playerObjectArray={playerObjectArray}
+          PG={PG}
           handleRaise={this.handleRaise}
         />
-        <MessageBox message={message} />
+        <MessageBox message={PG.message} />
       </div>
     );
   }

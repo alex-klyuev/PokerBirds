@@ -22,12 +22,12 @@ const CardContainer = styled.div`
 `;
 
 const Board = (props) => {
-  const deckColor = Math.floor(Math.random() * 2) ? 'Blue' : 'Red';
+  const { PG } = props;
   return (
     <div>
       <Deck>
         <CardContainer>
-          <img alt="" className="card" src={`lib/cards/${deckColor}_Back.svg`} />
+          <img alt="" className="card" src={`lib/cards/${PG.deckColor}_Back.svg`} />
         </CardContainer>
       </Deck>
       <BoardContainer>
@@ -52,7 +52,7 @@ const Board = (props) => {
 };
 
 Board.propTypes = {
-
+  PG: PropTypes.shape(/* fill me in */).isRequired,
 };
 
 export default Board;

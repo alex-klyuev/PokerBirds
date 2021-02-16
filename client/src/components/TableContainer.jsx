@@ -15,15 +15,19 @@ const Container = styled.div`
 `;
 
 const TableContainer = (props) => {
-
+  const { PG } = props;
   return (
     <Container>
       <div>
-        <Board />
+        <Board PG={PG} />
         <Pot />
       </div>
     </Container>
   );
-}
+};
+
+TableContainer.propTypes = {
+  PG: PropTypes.shape(/* fill me in */).isRequired,
+};
 
 export default TableContainer;

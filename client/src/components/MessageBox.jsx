@@ -5,6 +5,7 @@ import styled from 'styled-components';
 const Container = styled.div`
   height: 100px;
   width: 100vw;
+  margin-top: 30px;
 `;
 
 const Line = styled.h2`
@@ -17,7 +18,7 @@ const MessageBox = (props) => {
   const lines = message.split('\n');
   return (
     <Container>
-      {lines.map((line) => <Line>{line}</Line>)}
+      {lines.map((line) => <Line key={line}>{line}</Line>)}
     </Container>
   );
 };
