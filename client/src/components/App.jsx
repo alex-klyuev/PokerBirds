@@ -62,12 +62,25 @@ class App extends React.Component {
     // if gameUnderway = true, render game view and populate game
     // if gameUnderway = false, render startup form view
 
-    // for dev purposes:
-    // const PG = this.state;
-    // for (let i = 1; i <= Number(PG.numPlayers); i += 1) {
-    //   PG.playerObjectArray.push(new Player(i));
-    // }
-    // this.setState(PG);
+    const { gameId } = this.props;
+    axios.get(`/api/gamestate/${gameId}`)
+      .then((res) => {
+        // set gameunderway state depending on database
+        if (res.data.gameUnderway) {
+          // add player methods to player objects
+          console.log(res.data);
+          const PG = this.convertData(res.data);
+          console.log(PG);
+          this.setState(PG);
+        } else {
+          this.setState({
+            gameUnderway: false,
+          });
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   }
 
   // --- PLAYER INTERFACE FUNCTIONS ---
@@ -96,11 +109,13 @@ class App extends React.Component {
 
     // in the spirit of modularity, this function will pass the modified PG on to the next handler,
     // which will in turn update the state
-    this.handleActionRound(PG);
+    this.handleGameFlow(PG);
   }
 
-  // this function handles all action rounds
-  handleActionRound(PG) {
+  // this function handles the dealer rounds, action rounds, and showdown
+  handleGameFlow(PG) {
+    const { gameId } = this.props;
+
     // handle the pre-flop
     if (PG.actionRoundState === 0) {
       // pre-flop, the big blind (and the small blind if it's equal to big blind)
@@ -197,7 +212,18 @@ class App extends React.Component {
       }
     }
 
-    this.setState(PG);
+    // update the state in the database and do the same
+    // in the app upon successful write
+    axios.post(`/api/gamestate/${gameId}`, PG)
+      .then((res) => {
+        this.setState(PG, () => {
+          console.log(res.data);
+          console.log(PG);
+        });
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   }
 
   // --- GAME STARTUP FUNCTIONS ---
@@ -259,8 +285,8 @@ class App extends React.Component {
     // start the dealer round
     GF.refreshDealerRound(PG);
 
-    // update the state in the database and begin the game
-    // upon successful write
+    // update the state in the database and do the same
+    // in the app upon successful write
     axios.post(`/api/gamestate/${gameId}`, PG)
       .then(() => {
         this.setState(PG);
@@ -268,6 +294,25 @@ class App extends React.Component {
       .catch((err) => {
         console.log(err);
       });
+  }
+
+  // --- HELPER FUNCTIONs ---
+
+  convertData(PG) {
+    // iterate through all players
+    // create new player instances so that they have the player methods
+    // overwrite player properties with the data in the database
+    for (let i = 0; i < PG.playerObjectArray.length; i += 1) {
+      const source = PG.playerObjectArray[i];
+      console.log(source);
+      const target = new Player(i + 1);
+      console.log(target);
+      Object.assign(target, source);
+      console.log(target);
+      PG.playerObjectArray[i] = target;
+    }
+
+    return PG;
   }
 
   // --- RENDER VIEW FUNCTIONS ---
@@ -323,7 +368,7 @@ class App extends React.Component {
 }
 
 App.propTypes = {
-  gameId: PropTypes.string.isRequired,
+  gameId: PropTypes.number.isRequired,
 };
 
 export default App;
