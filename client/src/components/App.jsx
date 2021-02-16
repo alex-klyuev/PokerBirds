@@ -250,19 +250,12 @@ class App extends React.Component {
     // pick a color for the game
     PG.deckColor = Math.floor(Math.random() * 2) ? 'Blue' : 'Red';
 
-    // set the game state in the database and
-
-    // after updating state, start the dealer round
-
-    // i think this state update is redudant
-    this.setState(PG, this.startDealerRound);
+    this.startDealerRound(PG);
   }
 
   // this function is actually redudant with the "refresh dealer round" function;
-  // let's see if we can refactor
-  startDealerRound() {
-    const PG = this.state;
-
+  // will refactor later
+  startDealerRound(PG) {
     // build a new full deck and deal cards to the players
     GF.buildDeck(PG);
     GF.dealCards(PG);
@@ -284,6 +277,8 @@ class App extends React.Component {
       PG.allowCheck = true;
     }
 
+    // update the state in the database and begin the game
+    // upon successful write
     this.setState(PG);
   }
 
