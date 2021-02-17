@@ -1,3 +1,7 @@
+// --- REACT APP NOTES ---
+//
+// This file is not used by the React app, but is left for reference
+
 /* GENERAL NOTES---------------------------------------------------------------------------------------------
 This game is made so that you can play with cents, which is a feature I want available in the end product.
 For that reason, player inputs are converted to cents by multiplying everything by 100, and then divided by

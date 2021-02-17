@@ -515,8 +515,7 @@ const outputGameStatus = (PG) => {
 // output that comes under the board
 const outputPlayerInquiry = (PG) => {
   console.log(`\nPlayer ${PG.playerObjectArray[PG.turn].ID}, it's your turn.`);
-  console.log(`Your cards: | ${beautifyCard(PG.playerObjectArray[PG.turn].cards[0])} | ${
-    beautifyCard(PG.playerObjectArray[PG.turn].cards[1])} |`);
+  console.log(`Your cards: | ${beautifyCard(PG.playerObjectArray[PG.turn].cards[0])} | ${beautifyCard(PG.playerObjectArray[PG.turn].cards[1])} |`);
   console.log(`Min bet: $${convertToDollars(PG.previousBet + PG.minRaise)} \n`);
 };
 
@@ -559,7 +558,7 @@ const checkActionRoundEndingCondition = (PG) => {
   for (let i = 0; i < PG.playerObjectArray.length; i += 1) {
     // handles both pre-flop and post-flop "no raise" situations
     if (PG.playerObjectArray[i].actionState === 'call' || PG.playerObjectArray[i].actionState === 'fold'
-            || PG.playerObjectArray[i].actionState === 'check' || PG.playerObjectArray[i].actionState === '') {
+      || PG.playerObjectArray[i].actionState === 'check' || PG.playerObjectArray[i].actionState === '') {
       actionCounter1 += 1;
     }
 
@@ -567,7 +566,7 @@ const checkActionRoundEndingCondition = (PG) => {
 
     // handles "raise" situations
     if (PG.playerObjectArray[i].actionState === 'call' || PG.playerObjectArray[i].actionState === 'fold'
-            || PG.playerObjectArray[i].actionState === '') {
+      || PG.playerObjectArray[i].actionState === '') {
       actionCounter2 += 1;
     }
   }
@@ -681,12 +680,14 @@ const refreshDealerRound = (PG) => {
   // post blinds
   postBlinds(PG);
 
+  // edge case scenario where there are only 2 players and sb = bb,
+  // first player to act is sb. this allows them to check
+  if (PG.playerObjectArray[PG.turn].actionState === 'SB' && PG.smallBlind === PG.bigBlind) {
+    PG.allowCheck = true;
+  }
+
   // declare the dealer, output the first game board, and announce the first turn
   PG.message += `\nPlayer ${PG.playerObjectArray[PG.dealer].ID} is the dealer\nPlayer ${PG.playerObjectArray[PG.turn].ID}, it's your turn`;
-
-  // unnecessary for react app:
-  // outputGameStatus(PG);
-  // outputPlayerInquiry(PG);
 };
 
 export default {

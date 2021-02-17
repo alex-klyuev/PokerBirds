@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /* eslint-disable no-param-reassign */
 
 // TO-DO: Remove these later
@@ -9,6 +10,8 @@
 // GF = game functions
 
 import React from 'react';
+import PropTypes from 'prop-types';
+import axios from 'axios';
 import StartUpForm from './StartUpForm';
 import PlayerContainer from './PlayerContainer';
 import TableContainer from './TableContainer';
@@ -17,18 +20,18 @@ import GF from '../gameLogic/gameFunctions';
 import Player from '../gameLogic/Player';
 
 class App extends React.Component {
-  constructor() {
-    super();
+  constructor(props) {
+    super(props);
+
+    const { gameId } = this.props;
 
     // GAME STATE is managed here
     this.state = {
-      playerObjectArray: [],
+      _id: gameId,
       gameUnderway: false,
+      playerObjectArray: [],
       numPlayers: 0,
       buyIn: 0,
-      // gameUnderway: true,
-      // numPlayers: 4,
-      // buyIn: 10000,
       smallBlind: 0,
       bigBlind: 0,
       dealer: 0,
@@ -50,6 +53,7 @@ class App extends React.Component {
     this.registerSmallBlind = this.registerSmallBlind.bind(this);
     this.registerBigBlind = this.registerBigBlind.bind(this);
     this.startGame = this.startGame.bind(this);
+    this.endGame = this.endGame.bind(this);
     this.handlePlayerAction = this.handlePlayerAction.bind(this);
     // this.handleRaise = this.handleRaise.bind(this);
   }
@@ -59,15 +63,26 @@ class App extends React.Component {
     // if gameUnderway = true, render game view and populate game
     // if gameUnderway = false, render startup form view
 
-    // for dev purposes:
-    // const PG = this.state;
-    // for (let i = 1; i <= Number(PG.numPlayers); i += 1) {
-    //   PG.playerObjectArray.push(new Player(i));
-    // }
-    // this.setState(PG);
+    const { gameId } = this.props;
+    axios.get(`/api/gamestate/${gameId}`)
+      .then((res) => {
+        // set gameunderway state depending on database
+        if (res.data.gameUnderway) {
+          // add player methods to player objects
+          const PG = this.convertData(res.data);
+          this.setState(PG);
+        } else {
+          this.setState({
+            gameUnderway: false,
+          });
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   }
 
-  // --- PLAYER INTERFACE FUNCTIONS ---
+  // --- PLAYER INTERFACE & GAME FLOW FUNCTIONS ---
 
   handlePlayerAction(action) {
     const PG = this.state;
@@ -93,11 +108,13 @@ class App extends React.Component {
 
     // in the spirit of modularity, this function will pass the modified PG on to the next handler,
     // which will in turn update the state
-    this.handleActionRound(PG);
+    this.handleGameFlow(PG);
   }
 
-  // this function handles all action rounds
-  handleActionRound(PG) {
+  // this function handles the dealer rounds, action rounds, and showdown
+  handleGameFlow(PG) {
+    const { gameId } = this.props;
+
     // handle the pre-flop
     if (PG.actionRoundState === 0) {
       // pre-flop, the big blind (and the small blind if it's equal to big blind)
@@ -194,7 +211,15 @@ class App extends React.Component {
       }
     }
 
-    this.setState(PG);
+    // update the state in the database and do the same
+    // in the app upon successful write
+    axios.post(`/api/gamestate/${gameId}`, PG)
+      .then(() => {
+        this.setState(PG);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   }
 
   // --- GAME STARTUP FUNCTIONS ---
@@ -240,9 +265,10 @@ class App extends React.Component {
     });
   }
 
-  // --- GAME FLOW CONTROL FUNCTIONS ---
+  // --- START & STOP GAME FUNCTIONS ---
 
   startGame() {
+    const { gameId } = this.props;
     const PG = this.state;
 
     // pick random player to begin as the first dealer
@@ -252,35 +278,66 @@ class App extends React.Component {
     // pick a color for the game
     PG.deckColor = Math.floor(Math.random() * 2) ? 'Blue' : 'Red';
 
-    // after updating state, start the dealer round
-    this.setState(PG, this.startDealerRound);
+    // start the dealer round
+    GF.refreshDealerRound(PG);
+
+    // update the state in the database and do the same
+    // in the app upon successful write
+    axios.post(`/api/gamestate/${gameId}`, PG)
+      .then(() => {
+        this.setState(PG);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   }
 
-  startDealerRound() {
-    const PG = this.state;
+  endGame() {
+    const { gameId } = this.props;
+    const PG = {
+      _id: gameId,
+      gameUnderway: false,
+      playerObjectArray: [],
+      numPlayers: 0,
+      buyIn: 0,
+      smallBlind: 0,
+      bigBlind: 0,
+      dealer: 0,
+      turn: 0,
+      pot: 0,
+      actionRoundState: 0,
+      board: ['', '', '', '', ''],
+      deckArray: [],
+      deckColor: '',
+      minRaise: 0,
+      previousBet: 0,
+      allowCheck: false,
+      message: '',
+    };
 
-    // build a new full deck and deal cards to the players
-    GF.buildDeck(PG);
-    GF.dealCards(PG);
+    axios.post(`/api/gamestate/${gameId}`, PG)
+      .then(() => {
+        this.setState(PG);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }
 
-    // set turn to small blind, next after dealer
-    PG.turn = PG.dealer;
-    GF.incrementTurn(PG);
+  // --- HELPER FUNCTIONs ---
 
-    // post blinds
-    GF.postBlinds(PG);
-
-    // TO-DO: Modify to be more dynamic with the UI
-    // (focus that player somehow, gray out the others, etc.)
-    PG.message = `Player ${PG.playerObjectArray[PG.dealer].ID} is the dealer\nPlayer ${PG.playerObjectArray[PG.turn].ID}, it's your turn`;
-
-    // edge case scenario where there are only 2 players and sb = bb, first player to act is sb
-    // and this allows them to check
-    if (PG.playerObjectArray[PG.turn].actionState === 'SB' && PG.smallBlind === PG.bigBlind) {
-      PG.allowCheck = true;
+  convertData(PG) {
+    // iterate through all players
+    // create new player instances so that they have the player methods
+    // overwrite player properties with the data in the database
+    for (let i = 0; i < PG.playerObjectArray.length; i += 1) {
+      const source = PG.playerObjectArray[i];
+      const target = new Player(i + 1);
+      Object.assign(target, source);
+      PG.playerObjectArray[i] = target;
     }
 
-    this.setState(PG);
+    return PG;
   }
 
   // --- RENDER VIEW FUNCTIONS ---
@@ -295,7 +352,7 @@ class App extends React.Component {
           PG={PG}
           handlePlayerAction={this.handlePlayerAction}
         />
-        <MessageBox message={PG.message} />
+        <MessageBox message={PG.message} endGame={this.endGame} />
       </div>
     );
   }
@@ -334,5 +391,9 @@ class App extends React.Component {
     return this.renderStartUpView();
   }
 }
+
+App.propTypes = {
+  gameId: PropTypes.number.isRequired,
+};
 
 export default App;
