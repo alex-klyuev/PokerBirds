@@ -69,9 +69,7 @@ class App extends React.Component {
         // set gameunderway state depending on database
         if (res.data.gameUnderway) {
           // add player methods to player objects
-          console.log(res.data);
           const PG = this.convertData(res.data);
-          console.log(PG);
           this.setState(PG);
         } else {
           this.setState({
@@ -216,11 +214,8 @@ class App extends React.Component {
     // update the state in the database and do the same
     // in the app upon successful write
     axios.post(`/api/gamestate/${gameId}`, PG)
-      .then((res) => {
-        this.setState(PG, () => {
-          console.log(res.data);
-          console.log(PG);
-        });
+      .then(() => {
+        this.setState(PG);
       })
       .catch((err) => {
         console.log(err);
@@ -337,11 +332,8 @@ class App extends React.Component {
     // overwrite player properties with the data in the database
     for (let i = 0; i < PG.playerObjectArray.length; i += 1) {
       const source = PG.playerObjectArray[i];
-      console.log(source);
       const target = new Player(i + 1);
-      console.log(target);
       Object.assign(target, source);
-      console.log(target);
       PG.playerObjectArray[i] = target;
     }
 
