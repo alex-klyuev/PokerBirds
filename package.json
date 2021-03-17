@@ -3,9 +3,10 @@
   "author": "Alex Klyuev",
   "license": "MIT",
   "scripts": {
-    "start": "nodemon server",
+    "server-dev": "nodemon server",
     "react-dev": "webpack -w",
-    "build": "webpack"
+    "build": "webpack",
+    "start": "node server"
   },
   "dependencies": {
     "axios": "^0.21.1",
