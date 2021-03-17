@@ -2,7 +2,7 @@
 
 Poker Game created in React, Node, Mongo, and Express
 
-Card Graphics created by cardsJS:
+Card Graphics created by cardsJS: \n
 https://github.com/richardschneider/cardsJS
 http://richardschneider.github.io/cardsJS/
 
