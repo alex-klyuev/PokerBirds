@@ -24,3 +24,7 @@ In database/index.js, uncomment the first mongoose connection line and comment o
 Begin a game session at http://localhost:3000/:gameId
 
 For command line game written in node, run node nodeGame/game.js
+
+## Dependencies
+
+MongoDB
