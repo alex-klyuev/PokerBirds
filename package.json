@@ -6,7 +6,8 @@
     "server-dev": "nodemon server",
     "react-dev": "webpack -w",
     "build": "webpack",
-    "start": "node server"
+    "start": "node server",
+    "docker": "webpack & node server"
   },
   "dependencies": {
     "axios": "^0.21.1",
