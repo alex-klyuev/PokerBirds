@@ -1,7 +1,5 @@
 # PokerBirds
 
-Game found here: pokerbirds.io
-
 Poker Game created in React, Node, Mongo, and Express
 Deployed with Docker & Linode
 
