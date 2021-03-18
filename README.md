@@ -3,7 +3,7 @@
 Game found here: pokerbirds.io
 
 Poker Game created in React, Node, Mongo, and Express
-Deployed with Linode
+Deployed with Docker & Linode
 
 Card Graphics created by cardsJS:
  - https://github.com/richardschneider/cardsJS
