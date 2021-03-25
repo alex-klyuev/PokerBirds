@@ -1,16 +1,17 @@
 version: '3.8'
 services:
   pokerbirds:
-    container_name: pokerbirds
-    image: pokerbirds
+    container_name: pokerbirds_app
+    image: pokerbirds_app
     restart: always
     build: .
     depends_on:
      - 'database'
     ports:
-     - '3000:3000'
+     - '80:3000'
 
   database:
+    container_name: pokerbirds_database
     image: mongo:latest
     ports:
      - '27017:27017'
