@@ -4,4 +4,4 @@ const mongoose = require('mongoose');
 // mongoose.connect('mongodb://localhost/PokerBirds', { useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false });
 
 // for deployment through docker:
-mongoose.connect('mongodb://db:27017/PokerBirds', { useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false });
+mongoose.connect('mongodb://database:27017/PokerBirds', { useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false });
