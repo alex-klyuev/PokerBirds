@@ -1,8 +1,8 @@
 version: '3.8'
 services:
   pokerbirds:
-    container_name: pokerbirds_test
-    image: pokerbirds_test
+    container_name: pokerbirds_app
+    image: pokerbirds_app
     restart: always
     build: .
     depends_on:
