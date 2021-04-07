@@ -1,7 +1,10 @@
 # PokerBirds
 
-Poker Game created in React, Node, Mongo, and Express
+Online Poker Game for up to 8 players.
+Created with React, Node, Mongo, and Express
 Deployed with Docker & Linode
+
+<img src="./PokerBirds.webp">
 
 Card Graphics created by cardsJS:
  - https://github.com/richardschneider/cardsJS
