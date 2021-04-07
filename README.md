@@ -1,4 +1,4 @@
-# PokerBirds
+# 🐦 PokerBirds
 
 http://pokerbirds.io
 
