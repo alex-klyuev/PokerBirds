@@ -6,6 +6,8 @@ http://pokerbirds.io
 Created with React, Node, Mongo, and Express.
 Deployed with Docker & Linode
 
+y
+
 <img src="./PokerBirds.webp">
 
 Card Graphics created by cardsJS:
@@ -26,7 +28,11 @@ In database/index.js, uncomment the first mongoose connection line and comment o
 
 Begin a game session at http://localhost:3000/:gameId
 
-For command line game written in node, run node nodeGame/game.js
+Try out the Command Line Node game!
+
+```sh
+node nodeGame/game.js
+```
 
 ## Dependencies
 
