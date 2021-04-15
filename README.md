@@ -4,11 +4,7 @@ http://pokerbirds.io
 
 > Online Poker Game for up to 8 players.
 Created with React, Node, Mongo, and Express.
-Deployed with Docker & Linode
-
-y
-
-y
+Deployed with Docker & Linode \n start
 
 <img src="./PokerBirds.webp">
 
