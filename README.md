@@ -2,9 +2,10 @@
 
 http://pokerbirds.io
 
-Online Poker Game for up to 8 players.
-Created with React, Node, Mongo, and Express
+> Online Poker Game for up to 8 players.
+Created with React, Node, Mongo, and Express.
 Deployed with Docker & Linode
+<br/> Start a new game session at pokerbirds.io/:gameId
 
 <img src="./PokerBirds.webp">
 
@@ -18,16 +19,22 @@ From within the root directory:
 
 ```sh
 npm install
-npm build
+npm run build
 npm start
 ```
 
 In database/index.js, uncomment the first mongoose connection line and comment out the second mongoose connection line.
 
-Begin a game session at http://localhost:3000/:gameId
+Begin a game session at localhost:3000/:gameId
 
-For command line game written in node, run node nodeGame/game.js
+**Try out the Command Line Node game!**
+
+```sh
+node nodeGame/game.js
+```
 
 ## Dependencies
 
+Node.js
+<br/>
 MongoDB
